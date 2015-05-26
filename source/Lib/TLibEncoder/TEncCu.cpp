@@ -1358,8 +1358,17 @@ Void TEncCu::xCheckRDCostIntra( TComDataCU *&rpcBestCU,
     // however, if Luma ends up being one of those, the chroma dir must be later changed to DM_CHROMA.
     m_pcPredSearch->preestChromaPredMode( rpcTempCU, m_ppcOrigYuv[uiDepth], m_ppcPredYuvTemp[uiDepth] );
   }
-  //estIntraPredQT Ö÷Òª×öÄ£Ê½Ñ¡ÔñµÄ¹¤×÷£¬¸ºÔðÑ¡³ö¶ÔÓÚµ±Ç°PU µÄ×îÓÅÄ£Ê½£¬ÈçDC£¬»ò
-  //	  ·½ÏòÐÔ£¬»òplanar¡£
+
+  //主要做模式选择的工作，负责选出对于当前PU 的最优模式，如DC，或方向性，或planar。在这里面首先对N 个候选模式进行粗粒度筛选
+  /*代价函数为SATD + λ*ModeBits，从 M 个模式选出 N 个最可能的候选模式。所涉
+	  及的函数：
+	  􀁺 predIntraLumaAng： 算出当前PU 的预测值
+	  􀁺 calcHAD： 计算 SATD 代价
+	  􀁺 xModeBitsIntra： 计算当前模式所耗费的比特数目
+	  􀁺 xUpdateCandList： 更新模式的代价，保持前N 个模式的代价最小
+	  在选出N 个模式后，这N 个模式会进入xRecurIntraCodingQT 函数从而进行TU 的
+	  分割
+	  */
   m_pcPredSearch->estIntraPredQT( rpcTempCU, m_ppcOrigYuv[uiDepth], m_ppcPredYuvTemp[uiDepth], m_ppcResiYuvTemp[uiDepth], m_ppcRecoYuvTemp[uiDepth], resiLuma, uiPreCalcDistC, bSeparateLumaChroma DEBUG_STRING_PASS_INTO(sTest) );
 
   m_ppcRecoYuvTemp[uiDepth]->copyToPicComponent(COMPONENT_Y, rpcTempCU->getPic()->getPicYuvRec(), rpcTempCU->getCtuRsAddr(), rpcTempCU->getZorderIdxInCtu() );
