@@ -1,4 +1,4 @@
-/* The copyright in this software is being made available under the BSD
+﻿/* The copyright in this software is being made available under the BSD
  * License, included below. This software may be subject to other third party
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
@@ -354,7 +354,7 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
   m_pcPic              = pcPic;
   m_pcSlice            = pcPic->getSlice(pcPic->getCurrSliceIdx());
   m_ctuRsAddr          = ctuRsAddr;
-  m_uiCUPelX           = ( ctuRsAddr % pcPic->getFrameWidthInCtus() ) * g_uiMaxCUWidth;		//���ݹ�դɨ��˳��������ǰCTU��ƫ��
+  m_uiCUPelX           = ( ctuRsAddr % pcPic->getFrameWidthInCtus() ) * g_uiMaxCUWidth;		//ÒÀ¾Ý¹âÕ¤É¨ÃèË³Ðò¼ÆËã³öµ±Ç°CTUµÄÆ«ÒÆ
   m_uiCUPelY           = ( ctuRsAddr / pcPic->getFrameWidthInCtus() ) * g_uiMaxCUHeight;
   m_absZIdxInCtu       = 0;
   m_dTotalCost         = MAX_DOUBLE;
@@ -461,29 +461,29 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
 *- set CU width and CU height according to depth
 *- set qp value according to input qp
 *- set last-coded qp value according to input last-coded qp
-*-��ʼ��֡��֡�ڹ�������
+*-³õÊ¼»¯Ö¡¼äÖ¡ÄÚ¹À¼ÆÊý¾Ý
 */
 Void TComDataCU::initEstData( const UInt uiDepth, const Int qp, const Bool bTransquantBypass )
 {
-  m_dTotalCost         = MAX_DOUBLE;		//double ���ͳ�Ա���� �ܵķָ����sum of partition RD costs
-  m_uiTotalDistortion  = 0;					//�޷���int ���ͱ���  �ܵķָ�ʧ��sum of partition distortion 
-  m_uiTotalBits        = 0;					//sum of partition bits  bits�Ǳ����ı�����
-  m_uiTotalBins        = 0;					//sum of partition bins  bin�Ǿ䷨Ԫ�صĶ�����λ��
+  m_dTotalCost         = MAX_DOUBLE;		//double ÀàÐÍ³ÉÔ±º¯Êý ×ÜµÄ·Ö¸î´ú¼Ûsum of partition RD costs
+  m_uiTotalDistortion  = 0;					//ÎÞ·ûºÅint ÀàÐÍ±äÁ¿  ×ÜµÄ·Ö¸îÊ§Õæsum of partition distortion 
+  m_uiTotalBits        = 0;					//sum of partition bits  bitsÊÇ±àÂëºóµÄ±ÈÌØÊý
+  m_uiTotalBins        = 0;					//sum of partition bins  binÊÇ¾ä·¨ÔªËØµÄ¶þ½øÖÆÎ»Êý
 
-  UChar uhWidth  = g_uiMaxCUWidth  >> uiDepth;		//��ǰCU����
-  UChar uhHeight = g_uiMaxCUHeight >> uiDepth;		//��ǰCU�߶�
+  UChar uhWidth  = g_uiMaxCUWidth  >> uiDepth;		//µ±Ç°CU¿í¶È
+  UChar uhHeight = g_uiMaxCUHeight >> uiDepth;		//µ±Ç°CU¸ß¶È
 
-  for (UInt ui = 0; ui < m_uiNumPartition; ui++)	//����������С�ָ�죨TU��
+  for (UInt ui = 0; ui < m_uiNumPartition; ui++)	//±éÀúËùÓÐ×îÐ¡·Ö¸î¿ì£¨TU£©
   {
-    for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)		//˫��ο�֡ͬʱ����
+    for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)		//Ë«Ïò²Î¿¼Ö¡Í¬Ê±ÉèÖÃ
     {
       const RefPicList rpl=RefPicList(i);			
 	  m_apiMVPIdx[rpl][ui] = -1;					//array of motion vector predictor candidates
-      m_apiMVPNum[rpl][ui]  = -1;					//< array of number of possible motion vectors predictors����Ԥ���˫��Ԥ�� 
+      m_apiMVPNum[rpl][ui]  = -1;					//< array of number of possible motion vectors predictorsµ¥ÏòÔ¤²âºÍË«ÏòÔ¤²â 
     }
-    m_puhDepth  [ui]    = uiDepth;					//���õ�ǰ���
-    m_puhWidth  [ui]    = uhWidth;					//���õ�ǰ����
-    m_puhHeight [ui]    = uhHeight;					//���õ�ǰ�߶�
+    m_puhDepth  [ui]    = uiDepth;					//ÉèÖÃµ±Ç°Éî¶È
+    m_puhWidth  [ui]    = uhWidth;					//ÉèÖÃµ±Ç°¿í¶È
+    m_puhHeight [ui]    = uhHeight;					//ÉèÖÃµ±Ç°¸ß¶È
     m_puhTrIdx  [ui]    = 0;
     for(UInt comp=0; comp<MAX_NUM_COMPONENT; comp++)
     {
@@ -2278,6 +2278,7 @@ Bool TComDataCU::hasEqualMotion( UInt uiAbsPartIdx, TComDataCU* pcCandCU, UInt u
  * \param pcMvFieldNeighbours
  * \param puhInterDirNeighbours
  * \param numValidMergeCand
+ * //获取 merge 的候选运动参数集
  */
 Void TComDataCU::getInterMergeCandidates( UInt uiAbsPartIdx, UInt uiPUIdx, TComMvField* pcMvFieldNeighbours, UChar* puhInterDirNeighbours, Int& numValidMergeCand, Int mrgCandIdx )
 {
