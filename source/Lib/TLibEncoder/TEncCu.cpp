@@ -1,4 +1,4 @@
-/* The copyright in this software is being made available under the BSD
+﻿/* The copyright in this software is being made available under the BSD
  * License, included below. This software may be subject to other third party
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
@@ -226,7 +226,7 @@ Void TEncCu::init( TEncTop* pcEncTop )
 Void TEncCu::compressCtu( TComDataCU* pCtu )
 {
   // initialize CU data
-  m_ppcBestCU[0]->initCtu( pCtu->getPic(), pCtu->getCtuRsAddr() );			//��ʼ������CTU
+  m_ppcBestCU[0]->initCtu( pCtu->getPic(), pCtu->getCtuRsAddr() );			//³õÊ¼»¯¶¥²ãCTU
   m_ppcTempCU[0]->initCtu( pCtu->getPic(), pCtu->getCtuRsAddr() );
 
   // analysis of CU
@@ -422,7 +422,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
   TComSlice * pcSlice = rpcTempCU->getPic()->getSlice(rpcTempCU->getPic()->getCurrSliceIdx());
   // We need to split, so don't try these modes.
-  if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&					//�жϵײ����Ҳ�������Ƿ������ȿ��ȷ�Χ��
+  if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&					//ÅÐ¶Ïµ×²¿ºÍÓÒ²àµÄ×ø±êÊÇ·ñÔÚÃ÷¶È¿í¶È·¶Î§ÄÚ
        ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )
   {
     for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
@@ -1290,20 +1290,21 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
 {
   DEBUG_STRING_NEW(sTest)
 
-  UChar uhDepth = rpcTempCU->getDepth( 0 );
+  UChar uhDepth = rpcTempCU->getDepth( 0 );				//当前CU的深度
 
-  rpcTempCU->setDepthSubParts( uhDepth, 0 );
+  rpcTempCU->setDepthSubParts( uhDepth, 0 );			//为当前CU下的每个基本块(4*4)的深度信息设置为uhDepth
 
-  rpcTempCU->setSkipFlagSubParts( false, 0, uhDepth );
+  rpcTempCU->setSkipFlagSubParts( false, 0, uhDepth );	//？为CU中的每一个4*4单元初始化Skip_flag为false
 
-  rpcTempCU->setPartSizeSubParts  ( ePartSize,  0, uhDepth );
-  rpcTempCU->setPredModeSubParts  ( MODE_INTER, 0, uhDepth );
+  rpcTempCU->setPartSizeSubParts  ( ePartSize,  0, uhDepth );		//？为CU中的每一个4*4单元设置分割类型为ePartSize
+  rpcTempCU->setPredModeSubParts  ( MODE_INTER, 0, uhDepth );		//？为CU中的每一个4*4单元设置预测模式为MODE_INTER
   rpcTempCU->setChromaQpAdjSubParts( rpcTempCU->getCUTransquantBypass(0) ? 0 : m_ChromaQpAdjIdc, 0, uhDepth );
 
 #if AMP_MRG
-  rpcTempCU->setMergeAMP (true);
+  rpcTempCU->setMergeAMP (true);									//设置使用merge的AMP（m_bIsMergeAMP=true）
   m_pcPredSearch->predInterSearch ( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] DEBUG_STRING_PASS_INTO(sTest), false, bUseMRG );
-#else
+																	//在该函数中得到当前分割模式下的最优预测方式。
+#else	
   m_pcPredSearch->predInterSearch ( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] );
 #endif
 
@@ -1357,8 +1358,8 @@ Void TEncCu::xCheckRDCostIntra( TComDataCU *&rpcBestCU,
     // however, if Luma ends up being one of those, the chroma dir must be later changed to DM_CHROMA.
     m_pcPredSearch->preestChromaPredMode( rpcTempCU, m_ppcOrigYuv[uiDepth], m_ppcPredYuvTemp[uiDepth] );
   }
-  //estIntraPredQT ��Ҫ��ģʽѡ��Ĺ���������ѡ�����ڵ�ǰPU ������ģʽ����DC����
-  //	  �����ԣ���planar��
+  //estIntraPredQT Ö÷Òª×öÄ£Ê½Ñ¡ÔñµÄ¹¤×÷£¬¸ºÔðÑ¡³ö¶ÔÓÚµ±Ç°PU µÄ×îÓÅÄ£Ê½£¬ÈçDC£¬»ò
+  //	  ·½ÏòÐÔ£¬»òplanar¡£
   m_pcPredSearch->estIntraPredQT( rpcTempCU, m_ppcOrigYuv[uiDepth], m_ppcPredYuvTemp[uiDepth], m_ppcResiYuvTemp[uiDepth], m_ppcRecoYuvTemp[uiDepth], resiLuma, uiPreCalcDistC, bSeparateLumaChroma DEBUG_STRING_PASS_INTO(sTest) );
 
   m_ppcRecoYuvTemp[uiDepth]->copyToPicComponent(COMPONENT_Y, rpcTempCU->getPic()->getPicYuvRec(), rpcTempCU->getCtuRsAddr(), rpcTempCU->getZorderIdxInCtu() );

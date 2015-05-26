@@ -1,4 +1,4 @@
-/* The copyright in this software is being made available under the BSD
+﻿/* The copyright in this software is being made available under the BSD
  * License, included below. This software may be subject to other third party
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
@@ -3070,6 +3070,7 @@ Void TEncSearch::xRestrictBipredMergeCand( TComDataCU* pcCU, UInt puIdx, TComMvF
  * \param rpcRecoYuv
  * \param bUseRes
  * \returns Void
+ * 搜索帧间预测的最佳划分模式
  */
 #if AMP_MRG
 Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, TComYuv* pcResiYuv, TComYuv* pcRecoYuv DEBUG_STRING_FN_DECLARE(sDebug), Bool bUseRes, Bool bUseMRG )
@@ -3077,19 +3078,19 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, TComYuv* pcResiYuv, TComYuv* pcRecoYuv, Bool bUseRes )
 #endif
 {
-  for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
+  for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)			//参考帧队列数量
   {
-    m_acYuvPred[i].clear();
+    m_acYuvPred[i].clear();							//清除YUV的预测值
   }
   m_cYuvPredTemp.clear();
   pcPredYuv->clear();
 
   if ( !bUseRes )
   {
-    pcResiYuv->clear();
+    pcResiYuv->clear();								//残差
   }
 
-  pcRecoYuv->clear();
+  pcRecoYuv->clear();								//重建值
 
   TComMv       cMvSrchRngLT;
   TComMv       cMvSrchRngRB;
@@ -3101,8 +3102,8 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
   TComMv       cMvBi[2];
   TComMv       cMvTemp[2][33];
 
-  Int          iNumPart    = pcCU->getNumPartitions();
-  Int          iNumPredDir = pcCU->getSlice()->isInterP() ? 1 : 2;
+  Int          iNumPart    = pcCU->getNumPartitions();				//根据当前的PU划分模式，得到最终有几个PU（数量）	
+  Int          iNumPredDir = pcCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
 
   TComMv       cMvPred[2][33];
 
@@ -3135,6 +3136,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
   UChar uhInterDirNeighbours[MRG_MAX_NUM_CANDS];
   Int numValidMergeCand = 0 ;
 
+  //为当前CU中的每一个PU块进行运动估计和运动补偿，确定最佳的MVP
   for ( Int iPartIdx = 0; iPartIdx < iNumPart; iPartIdx++ )
   {
     Distortion   uiCost[2] = { std::numeric_limits<Distortion>::max(), std::numeric_limits<Distortion>::max() };
@@ -3174,18 +3176,21 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 #endif
 
     //  Uni-directional prediction
-    for ( Int iRefList = 0; iRefList < iNumPredDir; iRefList++ )
+    for ( Int iRefList = 0; iRefList < iNumPredDir; iRefList++ )				//iNumPredDir为预测方向数量
     {
       RefPicList  eRefPicList = ( iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0 );
-
+																				//后向参考帧	前向
+	  //循环每个参考帧
       for ( Int iRefIdxTemp = 0; iRefIdxTemp < pcCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTemp++ )
       {
         uiBitsTemp = uiMbBits[iRefList];
-        if ( pcCU->getSlice()->getNumRefIdx(eRefPicList) > 1 )
+        if ( pcCU->getSlice()->getNumRefIdx(eRefPicList) > 1 )					//双向预测时候大于1
         {
           uiBitsTemp += iRefIdxTemp+1;
           if ( iRefIdxTemp == pcCU->getSlice()->getNumRefIdx(eRefPicList)-1 ) uiBitsTemp--;
         }
+
+		//出代价最小的MVP
         xEstimateMvPredAMVP( pcCU, pcOrgYuv, iPartIdx, eRefPicList, iRefIdxTemp, cMvPred[iRefList][iRefIdxTemp], false, &biPDistTemp);
         aaiMvpIdx[iRefList][iRefIdxTemp] = pcCU->getMVPIdx(eRefPicList, uiPartAddr);
         aaiMvpNum[iRefList][iRefIdxTemp] = pcCU->getMVPNum(eRefPicList, uiPartAddr);
@@ -3216,6 +3221,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
           }
           else
           {
+			  //进行运动估计，通过运动搜索求得最优的运动矢量
             xMotionEstimation ( pcCU, pcOrgYuv, iPartIdx, eRefPicList, &cMvPred[iRefList][iRefIdxTemp], iRefIdxTemp, cMvTemp[iRefList][iRefIdxTemp], uiBitsTemp, uiCostTemp );
           }
         }
@@ -3280,7 +3286,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
         pcCU->getCUMvField( REF_PIC_LIST_1 )->setAllMv( cMvBi[1], ePartSize, uiPartAddr, 0, iPartIdx );
         pcCU->getCUMvField( REF_PIC_LIST_1 )->setAllRefIdx( iRefIdxBi[1], ePartSize, uiPartAddr, 0, iPartIdx );
         TComYuv* pcYuvPred = &m_acYuvPred[REF_PIC_LIST_1];
-        motionCompensation( pcCU, pcYuvPred, REF_PIC_LIST_1, iPartIdx );
+        motionCompensation( pcCU, pcYuvPred, REF_PIC_LIST_1, iPartIdx );		//进行运动补偿
 
         uiMotBits[0] = uiBits[0] - uiMbBits[0];
         uiMotBits[1] = uiMbBits[1];
