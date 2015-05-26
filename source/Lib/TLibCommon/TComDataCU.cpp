@@ -354,7 +354,7 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
   m_pcPic              = pcPic;
   m_pcSlice            = pcPic->getSlice(pcPic->getCurrSliceIdx());
   m_ctuRsAddr          = ctuRsAddr;
-  m_uiCUPelX           = ( ctuRsAddr % pcPic->getFrameWidthInCtus() ) * g_uiMaxCUWidth;		//ÒÀ¾Ý¹âÕ¤É¨ÃèË³Ðò¼ÆËã³öµ±Ç°CTUµÄÆ«ÒÆ
+  m_uiCUPelX           = ( ctuRsAddr % pcPic->getFrameWidthInCtus() ) * g_uiMaxCUWidth;		//依据光栅扫描顺序计算出当前CTU的偏移
   m_uiCUPelY           = ( ctuRsAddr / pcPic->getFrameWidthInCtus() ) * g_uiMaxCUHeight;
   m_absZIdxInCtu       = 0;
   m_dTotalCost         = MAX_DOUBLE;
@@ -465,25 +465,25 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
 */
 Void TComDataCU::initEstData( const UInt uiDepth, const Int qp, const Bool bTransquantBypass )
 {
-  m_dTotalCost         = MAX_DOUBLE;		//double ÀàÐÍ³ÉÔ±º¯Êý ×ÜµÄ·Ö¸î´ú¼Ûsum of partition RD costs
-  m_uiTotalDistortion  = 0;					//ÎÞ·ûºÅint ÀàÐÍ±äÁ¿  ×ÜµÄ·Ö¸îÊ§Õæsum of partition distortion 
-  m_uiTotalBits        = 0;					//sum of partition bits  bitsÊÇ±àÂëºóµÄ±ÈÌØÊý
-  m_uiTotalBins        = 0;					//sum of partition bins  binÊÇ¾ä·¨ÔªËØµÄ¶þ½øÖÆÎ»Êý
+  m_dTotalCost         = MAX_DOUBLE;		////double 类型成员函数 总的分割代价sum of partition RD costs
+  m_uiTotalDistortion  = 0;					///无符号int 类型变量  总的分割失真sum of partition distortion 
+  m_uiTotalBits        = 0;					//sum of partition bits  bits是编码后的比特数
+  m_uiTotalBins        = 0;					//sum of partition bins  bin是句法元素的二进制位数
 
-  UChar uhWidth  = g_uiMaxCUWidth  >> uiDepth;		//µ±Ç°CU¿í¶È
-  UChar uhHeight = g_uiMaxCUHeight >> uiDepth;		//µ±Ç°CU¸ß¶È
+  UChar uhWidth  = g_uiMaxCUWidth  >> uiDepth;		//当前CU宽度
+  UChar uhHeight = g_uiMaxCUHeight >> uiDepth;		//当前CU高度
 
-  for (UInt ui = 0; ui < m_uiNumPartition; ui++)	//±éÀúËùÓÐ×îÐ¡·Ö¸î¿ì£¨TU£©
+  for (UInt ui = 0; ui < m_uiNumPartition; ui++)	//遍历所有最小分割快（TU）
   {
-    for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)		//Ë«Ïò²Î¿¼Ö¡Í¬Ê±ÉèÖÃ
+    for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)		//双向参考帧同时设置
     {
       const RefPicList rpl=RefPicList(i);			
 	  m_apiMVPIdx[rpl][ui] = -1;					//array of motion vector predictor candidates
-      m_apiMVPNum[rpl][ui]  = -1;					//< array of number of possible motion vectors predictorsµ¥ÏòÔ¤²âºÍË«ÏòÔ¤²â 
+      m_apiMVPNum[rpl][ui]  = -1;					//< array of number of possible motion vectors  predictors单向预测和双向预测 
     }
-    m_puhDepth  [ui]    = uiDepth;					//ÉèÖÃµ±Ç°Éî¶È
-    m_puhWidth  [ui]    = uhWidth;					//ÉèÖÃµ±Ç°¿í¶È
-    m_puhHeight [ui]    = uhHeight;					//ÉèÖÃµ±Ç°¸ß¶È
+    m_puhDepth  [ui]    = uiDepth;					//设置当前深度
+    m_puhWidth  [ui]    = uhWidth;					//设置当前宽度
+    m_puhHeight [ui]    = uhHeight;					//设置当前高度
     m_puhTrIdx  [ui]    = 0;
     for(UInt comp=0; comp<MAX_NUM_COMPONENT; comp++)
     {
