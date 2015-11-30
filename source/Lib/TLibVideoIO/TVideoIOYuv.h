@@ -53,8 +53,9 @@ using namespace std;
 /// YUV file I/O class
 class TVideoIOYuv
 {
+	//类详解： http://blog.csdn.net/zhuyonghao123/article/details/9068181
 private:
-  fstream   m_cHandle;                                      ///< file handle
+  fstream   m_cHandle;                                      ///< file handle  //文件流句柄  
   Int       m_fileBitdepth[MAX_NUM_CHANNEL_TYPE]; ///< bitdepth of input/output video file
   Int       m_MSBExtendedBitDepth[MAX_NUM_CHANNEL_TYPE];  ///< bitdepth after addition of MSBs (with value 0)
   Int       m_bitdepthShift[MAX_NUM_CHANNEL_TYPE];  ///< number of bits to increase or decrease image by before/after write/read

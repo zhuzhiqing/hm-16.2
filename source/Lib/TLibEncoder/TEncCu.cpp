@@ -366,6 +366,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   DEBUG_STRING_NEW(sDebug)
 
   // get Original YUV data from picture
+  //getZorderIdxInCU():CU中的Z扫描绝对地址；getAddr():CU在slice中的地址；getPicYuvOrg():输入YUV的纹理信息
   m_ppcOrigYuv[uiDepth]->copyFromPicYuv( pcPic->getPicYuvOrg(), rpcBestCU->getCtuRsAddr(), rpcBestCU->getZorderIdxInCtu() );
 
     // variable for Early CU determination
@@ -376,12 +377,12 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   Bool    earlyDetectionSkipMode = false;
 
   Bool bBoundary = false;
-  UInt uiLPelX   = rpcBestCU->getCUPelX();
-  UInt uiRPelX   = uiLPelX + rpcBestCU->getWidth(0)  - 1;
-  UInt uiTPelY   = rpcBestCU->getCUPelY();
-  UInt uiBPelY   = uiTPelY + rpcBestCU->getHeight(0) - 1;
+  UInt uiLPelX   = rpcBestCU->getCUPelX();					//CU内部左边界
+  UInt uiRPelX   = uiLPelX + rpcBestCU->getWidth(0)  - 1;	//CU内部右边界 
+  UInt uiTPelY   = rpcBestCU->getCUPelY();					//CU内部上边界
+  UInt uiBPelY   = uiTPelY + rpcBestCU->getHeight(0) - 1;	//CU内部下边界  
 
-  Int iBaseQP = xComputeQP( rpcBestCU, uiDepth );
+  Int iBaseQP = xComputeQP( rpcBestCU, uiDepth );			//配置文件(.cfg)中设置的QP值32.可以设置范围为0-51
   Int iMinQP;
   Int iMaxQP;
   Bool isAddLowestQP = false;
@@ -422,8 +423,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
   TComSlice * pcSlice = rpcTempCU->getPic()->getSlice(rpcTempCU->getPic()->getCurrSliceIdx());
   // We need to split, so don't try these modes.
-  if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&					//ÅÐ¶Ïµ×²¿ºÍÓÒ²àµÄ×ø±êÊÇ·ñÔÚÃ÷¶È¿í¶È·¶Î§ÄÚ
-       ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )
+  if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&					//HM10.0允许处理的最小亮度采样宽度
+       ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )					//HM10.0允许处理的最小亮度采样高度  
   {
     for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
     {
@@ -446,18 +447,19 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
         m_ChromaQpAdjIdc = ((uiLPelX >> lgMinCuSize) + (uiTPelY >> lgMinCuSize)) % (pcSlice->getPPS()->getChromaQpAdjTableSize() + 1);
       }
 
-      rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
+      rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );		//当前CU初始化估计数据 对当前CU以4x4大小进行初始化
 
       // do inter modes, SKIP and 2Nx2N
       if( rpcBestCU->getSlice()->getSliceType() != I_SLICE )
       {
         // 2Nx2N
+		//帧间预测模式---帧间2Nx2N时，率失真代价比较  
         if(m_pcEncCfg->getUseEarlySkipDetection())
         {
           xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug) );
           rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );//by Competition for inter_2Nx2N
         }
-        // SKIP
+		// SKIP Merge模式  
         xCheckRDCostMerge2Nx2N( rpcBestCU, rpcTempCU DEBUG_STRING_PASS_INTO(sDebug), &earlyDetectionSkipMode );//by Merge for inter_2Nx2N
         rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
 
@@ -756,6 +758,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
         pcSubBestPartCU->initSubCU( rpcTempCU, uiPartUnitIdx, uhNextDepth, iQP );           // clear sub partition datas or init.
         pcSubTempPartCU->initSubCU( rpcTempCU, uiPartUnitIdx, uhNextDepth, iQP );           // clear sub partition datas or init.
 
+		//注意这里是用rpcTempCU对pcSubBestPartCU和pcSubTemPartC进行初始化, 函数到此 rpcBestCU里面还是当前CU64x64大小最优的PU信息。
         if( ( pcSubBestPartCU->getCUPelX() < pcSlice->getSPS()->getPicWidthInLumaSamples() ) && ( pcSubBestPartCU->getCUPelY() < pcSlice->getSPS()->getPicHeightInLumaSamples() ) )
         {
           if ( 0 == uiPartUnitIdx) //initialize RD with previous depth buffer
@@ -782,7 +785,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 #else
           xCompressCU( pcSubBestPartCU, pcSubTempPartCU, uhNextDepth );
 #endif
-
+		  //完成4个划分的最优的信息的累加，以便和为分割前的CU的最优的预测模式的RD-cost进行比较也就是m_ppcBestCU进行比较。
           rpcTempCU->copyPartFrom( pcSubBestPartCU, uiPartUnitIdx, uhNextDepth );         // Keep best part data to current temporary data.
           xCopyYuv2Tmp( pcSubBestPartCU->getTotalNumPart()*uiPartUnitIdx, uhNextDepth );
         }
@@ -860,6 +863,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
   DEBUG_STRING_APPEND(sDebug_, sDebug);
 
+  //这个函数就是将得到的最优的PU的模式和预测信息，及CU的划分的信息赋值到pcCU中。
   rpcBestCU->copyToPic(uiDepth);                                                     // Copy Best data to Picture for next partition prediction.
 
   xCopyYuv2Pic( rpcBestCU->getPic(), rpcBestCU->getCtuRsAddr(), rpcBestCU->getZorderIdxInCtu(), uiDepth, uiDepth, rpcBestCU, uiLPelX, uiTPelY );   // Copy Yuv data to picture Yuv
@@ -1171,8 +1175,9 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   }
   UChar uhDepth = rpcTempCU->getDepth( 0 );
   rpcTempCU->setPartSizeSubParts( SIZE_2Nx2N, 0, uhDepth ); // interprets depth relative to CTU level
-  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );
+  rpcTempCU->getInterMergeCandidates( 0, 0, cMvFieldNeighbours,uhInterDirNeighbours, numValidMergeCand );		//是创建一个merge list
 
+  //创建一个Merging candidates的列表
   Int mergeCandBuffer[MRG_MAX_NUM_CANDS];
   for( UInt ui = 0; ui < numValidMergeCand; ++ui )
   {
@@ -1182,7 +1187,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
   Bool bestIsSkip = false;
 
   UInt iteration;
-  if ( rpcTempCU->isLosslessCoded(0))
+  if ( rpcTempCU->isLosslessCoded(0))		//默认为false
   {
     iteration = 1;
   }
@@ -1194,11 +1199,11 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
 
   for( UInt uiNoResidual = 0; uiNoResidual < iteration; ++uiNoResidual )
   {
-    for( UInt uiMergeCand = 0; uiMergeCand < numValidMergeCand; ++uiMergeCand )
+    for( UInt uiMergeCand = 0; uiMergeCand < numValidMergeCand; ++uiMergeCand )		//遍历所有merging candidates
     {
-      if(!(uiNoResidual==1 && mergeCandBuffer[uiMergeCand]==1))
+      if(!(uiNoResidual==1 && mergeCandBuffer[uiMergeCand]==1))						//uiNoResidual 等于0或者mergeCanBuffer[uiMergeCand]等于0时条件成立
       {
-        if( !(bestIsSkip && uiNoResidual == 0) )
+        if( !(bestIsSkip && uiNoResidual == 0) )									
         {
           DEBUG_STRING_NEW(tmpStr)
           // set MC parameters
@@ -1213,7 +1218,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
           rpcTempCU->getCUMvField( REF_PIC_LIST_1 )->setAllMvField( cMvFieldNeighbours[1 + 2*uiMergeCand], SIZE_2Nx2N, 0, 0 ); // interprets depth relative to rpcTempCU level
 
           // do MC
-          m_pcPredSearch->motionCompensation ( rpcTempCU, m_ppcPredYuvTemp[uhDepth] );
+          m_pcPredSearch->motionCompensation ( rpcTempCU, m_ppcPredYuvTemp[uhDepth] );			//运动补偿
           // estimate residual and encode everything
           m_pcPredSearch->encodeResAndCalcRdInterCU( rpcTempCU,
                                                      m_ppcOrigYuv    [uhDepth],
@@ -1227,7 +1232,7 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
           DebugInterPredResiReco(tmpStr, *(m_ppcPredYuvTemp[uhDepth]), *(m_ppcResiYuvBest[uhDepth]), *(m_ppcRecoYuvTemp[uhDepth]), DebugStringGetPredModeMask(rpcTempCU->getPredictionMode(0)));
 #endif
 
-          if ((uiNoResidual == 0) && (rpcTempCU->getQtRootCbf(0) == 0))
+          if ((uiNoResidual == 0) && (rpcTempCU->getQtRootCbf(0) == 0))			//CBF为0，说明变换系数全为0
           {
             // If no residual when allowing for one, then set mark to not try case where residual is forced to 0
             mergeCandBuffer[uiMergeCand] = 1;
@@ -1236,11 +1241,11 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
           rpcTempCU->setSkipFlagSubParts( rpcTempCU->getQtRootCbf(0) == 0, 0, uhDepth );
           Int orgQP = rpcTempCU->getQP( 0 );
           xCheckDQP( rpcTempCU );
-          xCheckBestMode(rpcBestCU, rpcTempCU, uhDepth DEBUG_STRING_PASS_INTO(bestStr) DEBUG_STRING_PASS_INTO(tmpStr));
+          xCheckBestMode(rpcBestCU, rpcTempCU, uhDepth DEBUG_STRING_PASS_INTO(bestStr) DEBUG_STRING_PASS_INTO(tmpStr));	//更新最佳模式
 
-          rpcTempCU->initEstData( uhDepth, orgQP, bTransquantBypassFlag );
+          rpcTempCU->initEstData( uhDepth, orgQP, bTransquantBypassFlag );		//重新初始化预测参数，为下一次预测做准备
 
-          if( m_pcEncCfg->getUseFastDecisionForMerge() && !bestIsSkip )
+          if( m_pcEncCfg->getUseFastDecisionForMerge() && !bestIsSkip )			//getUseFastDecisionForMerge默认为true
           {
             bestIsSkip = rpcBestCU->getQtRootCbf(0) == 0;
           }
@@ -1248,9 +1253,9 @@ Void TEncCu::xCheckRDCostMerge2Nx2N( TComDataCU*& rpcBestCU, TComDataCU*& rpcTem
       }
     }
 
-    if(uiNoResidual == 0 && m_pcEncCfg->getUseEarlySkipDetection())
+    if(uiNoResidual == 0 && m_pcEncCfg->getUseEarlySkipDetection())				//第一次对merging candidates迭代后
     {
-      if(rpcBestCU->getQtRootCbf( 0 ) == 0)
+      if(rpcBestCU->getQtRootCbf( 0 ) == 0)										//earlyDetectionSkip算法
       {
         if( rpcBestCU->getMergeFlag( 0 ))
         {
@@ -1496,7 +1501,7 @@ Void TEncCu::xCheckBestMode( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UIn
 #ifdef DEBUG_STRING
     DEBUG_STRING_SWAP(sParent, sTest)
     const PredMode predMode=rpcBestCU->getPredictionMode(0);
-    if ((DebugOptionList::DebugString_Structure.getInt()&DebugStringGetPredModeMask(predMode)) && bAddSizeInfo)
+    if ((DebugOptionList::DebugString_Structure.getInt()&DebugStringGetPredModeMask(predMode)) && bAddSizeInfo)	
     {
       std::stringstream ss(stringstream::out);
       ss <<"###: " << (predMode==MODE_INTRA?"Intra   ":"Inter   ") << partSizeToString[rpcBestCU->getPartitionSize(0)] << " CU at " << rpcBestCU->getCUPelX() << ", " << rpcBestCU->getCUPelY() << " width=" << UInt(rpcBestCU->getWidth(0)) << std::endl;

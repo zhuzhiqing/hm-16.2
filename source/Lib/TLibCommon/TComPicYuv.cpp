@@ -94,7 +94,11 @@ Void TComPicYuv::create( const Int  iPicWidth,    const  Int iPicHeight,    cons
     for(; chan<getNumberValidComponents(); chan++)
     {
       const ComponentID ch=ComponentID(chan);
+
+	  //YUV内存只分配一次，m_apiPicBuf指向回字形最外侧
       m_apiPicBuf[chan] = (Pel*)xMalloc( Pel, getStride(ch)       * getTotalHeight(ch));
+
+	  //m_piPicOrg指向回字形内侧，实际图像YUV的起始地址
       m_piPicOrg[chan]  = m_apiPicBuf[chan] + (m_iMarginY >> getComponentScaleY(ch))   * getStride(ch)       + (m_iMarginX >> getComponentScaleX(ch));
     }
     for(;chan<MAX_NUM_COMPONENT; chan++)

@@ -56,25 +56,38 @@ class TComPicYuv
 {
 private:
 
+	//http://blog.sina.com.cn/s/blog_9f945ced0102w0ub.html
+
+	//以下以（1024*768）的图像为例
   // ------------------------------------------------------------------------------------------------
   //  YUV buffer
   // ------------------------------------------------------------------------------------------------
 
+	//这个buffer是图像经过扩充后的（可以使得，MV指向图像外，可以保证LCU的整数划分）
+	//这就像是一个回字，里面是图像，外面的矩形是扩充后的图像
+	//	m_apiPicBuf[]=		((m_iPicWidth     ) + (m_iMarginX  <<1)) >> getComponentScaleX(id) 
+	//					*
+	//						((m_iPicHeight    ) + (m_iMarginY  <<1)) >> getComponentScaleY(id); 
   Pel*  m_apiPicBuf[MAX_NUM_COMPONENT];             ///< Buffer (including margin)
 
+  //是原始的读入YUV文件的指针，但是数据的存储方式为扩充后的图像矩形，指向里面的回字的左上角
+  //getStride()获取回字外面举行的宽度
   Pel*  m_piPicOrg[MAX_NUM_COMPONENT];              ///< m_apiPicBufY + m_iMarginLuma*getStride() + m_iMarginLuma
 
   // ------------------------------------------------------------------------------------------------
   //  Parameter for general YUV buffer usage
   // ------------------------------------------------------------------------------------------------
 
-  Int   m_iPicWidth;                                ///< Width of picture in pixels
-  Int   m_iPicHeight;                               ///< Height of picture in pixels
+  Int   m_iPicWidth;                                ///< Width of picture in pixels     1024
+  Int   m_iPicHeight;                               ///< Height of picture in pixels	768
   ChromaFormat m_chromaFormatIDC;                   ///< Chroma Format
 
+  //存放每个LCU中的每一个4x4的最小分割单元（预测单元），到其LCU左上角地址的偏移量
   Int*  m_ctuOffsetInBuffer[MAX_NUM_CHANNEL_TYPE];  ///< Gives an offset in the buffer for a given CTU (and channel)
   Int*  m_subCuOffsetInBuffer[MAX_NUM_CHANNEL_TYPE];///< Gives an offset in the buffer for a given sub-CU (and channel), relative to start of CTU
 
+
+  //回字形的内外矩形边的水平距离、垂直距离
   Int   m_iMarginX;                                 ///< margin of Luma channel (chroma's may be smaller, depending on ratio)
   Int   m_iMarginY;                                 ///< margin of Luma channel (chroma's may be smaller, depending on ratio)
 
