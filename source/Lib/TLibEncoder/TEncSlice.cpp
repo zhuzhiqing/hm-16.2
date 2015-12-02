@@ -811,6 +811,29 @@ Void TEncSlice::compressSlice( TComPic* pcPic )
     m_pcCuEncoder->compressCtu( pCtu );					//就是一个LCU的编码，包括CU的划分，PU模式的决定，TU的划
 
 
+	//static int count = 0;
+	//count++;
+	////if(pCtu->getSlice()->getSliceType() != I_SLICE)
+	//{
+	//	ofstream out("计算结果.txt", ios::app);
+	//	out << "***************************************************************************" << endl;
+	//	if(count %28!=0)
+	//		out << "frame:" << count / 28 + 1 << '\t' << "CTU:" << count % 28 << endl;
+	//	else
+	//		out << "frame:" << count / 28  << '\t' << "CTU:" << count % 28 +1<< endl;
+
+	//	for (int i = 0; i < 16; i++)
+	//	{
+	//		for (int j = 0; j < 16; j++) {
+	//			out << (unsigned int)pCtu->getDepth()[g_auiRasterToZscan[i * 16 + j]] << " ";
+	//		}
+
+	//		out << endl;
+	//	}
+
+	//}
+
+
     // All CTU decisions have now been made. Restore entropy coder to an initial stage, ready to make a true encode,
     // which will result in the state of the contexts being correct. It will also count up the number of bits coded,
     // which is used if there is a limit of the number of bytes per slice-segment.
@@ -823,20 +846,6 @@ Void TEncSlice::compressSlice( TComPic* pcPic )
 
     // encode CTU and calculate the true bit counters.
     m_pcCuEncoder->encodeCtu( pCtu );							//这里可以看出来pcCU是存储着需要编码的信息
-
-	if(pCtu->getSlice()->getSliceType() != I_SLICE)
-	{
-		ofstream out("计算结果.txt", ios::app);
-		for (int i = 0; i < 16; i++) 
-		{
-			for (int j = 0; j < 16; j++) {
-				out << (unsigned int)pCtu->getDepth()[g_auiRasterToZscan[ i * 16 + j]]<<" " ;
-			}
-
-			out << endl;
-		}
-		out << "***************************************************************************" << endl;
-	}
 
     pRDSbacCoder->setBinCountingEnableFlag( false );
 
