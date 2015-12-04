@@ -57,6 +57,13 @@ TComDataCU::TComDataCU()
   m_pcSlice            = NULL;
   m_puhDepth           = NULL;
 
+#if COST_RECORD
+  m_puhCost			   = NULL;
+  m_puhDistortion	   = NULL;
+  m_puhBits			   = NULL;
+  m_puhBins			   = NULL;
+#endif
+
   m_skipFlag           = NULL;
 
   m_pePartSize         = NULL;
@@ -130,6 +137,13 @@ Void TComDataCU::create( ChromaFormat chromaFormatIDC, UInt uiNumPartition, UInt
     m_puhDepth           = (UChar*    )xMalloc(UChar,    uiNumPartition);
     m_puhWidth           = (UChar*    )xMalloc(UChar,    uiNumPartition);
     m_puhHeight          = (UChar*    )xMalloc(UChar,    uiNumPartition);
+
+#if COST_RECORD
+	m_puhCost			 = new Double [uiNumPartition];
+	m_puhDistortion	     = new Distortion [uiNumPartition];
+	m_puhBits			 = new UInt [uiNumPartition];
+	m_puhBins			 = new UInt [uiNumPartition];
+#endif
 
     m_ChromaQpAdj        = new UChar[ uiNumPartition ];
     m_skipFlag           = new Bool[ uiNumPartition ];
@@ -224,6 +238,13 @@ Void TComDataCU::destroy()
     if ( m_puhDepth           ) { xFree(m_puhDepth);            m_puhDepth           = NULL; }
     if ( m_puhWidth           ) { xFree(m_puhWidth);            m_puhWidth           = NULL; }
     if ( m_puhHeight          ) { xFree(m_puhHeight);           m_puhHeight          = NULL; }
+
+#if COST_RECORD
+	if (m_puhCost			  ) { delete[] m_puhCost;             m_puhCost = NULL; }
+	if (m_puhDistortion		  ) { delete[] m_puhDistortion;       m_puhDistortion = NULL; }
+	if (m_puhBits			  ) { delete[] m_puhBits;             m_puhBits = NULL; }
+	if (m_puhBins			  ) { delete[] m_puhBins;             m_puhBins = NULL; }
+#endif
 
     if ( m_skipFlag           ) { delete[] m_skipFlag;          m_skipFlag          = NULL; }
 
@@ -372,12 +393,27 @@ Void TComDataCU::initCtu( TComPic* pcPic, UInt ctuRsAddr )
   memset( m_puhTrIdx          , 0,                          m_uiNumPartition * sizeof( *m_puhTrIdx ) );
   memset( m_puhWidth          , g_uiMaxCUWidth,             m_uiNumPartition * sizeof( *m_puhWidth ) );
   memset( m_puhHeight         , g_uiMaxCUHeight,            m_uiNumPartition * sizeof( *m_puhHeight ) );
+
   for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
   {
     const RefPicList rpl=RefPicList(i);
     memset( m_apiMVPIdx[rpl]  , -1,                         m_uiNumPartition * sizeof( *m_apiMVPIdx[rpl] ) );
     memset( m_apiMVPNum[rpl]  , -1,                         m_uiNumPartition * sizeof( *m_apiMVPNum[rpl] ) );
   }
+
+#if COST_RECORD
+  for (int i = 0; i < m_uiNumPartition; i++) {
+	  m_puhCost[i] = MAX_DOUBLE;
+	  m_puhDistortion[i] = 0;
+	  m_puhBits[i] = 0;
+	  m_puhBins[i] = 0;
+  }
+  //memset(m_puhCost			  , MAX_DOUBLE			   ,	m_uiNumPartition * sizeof(*m_puhCost));
+  //memset(m_puhDistortion	  , 0					   ,	m_uiNumPartition * sizeof(*m_puhDistortion));
+  //memset(m_puhBits			  , 0					   ,	m_uiNumPartition * sizeof(*m_puhBits));
+  //memset(m_puhBins			  , 0					   ,	m_uiNumPartition * sizeof(*m_puhBins));
+#endif
+
   memset( m_phQP              , getSlice()->getSliceQp(),   m_uiNumPartition * sizeof( *m_phQP ) );
   memset( m_ChromaQpAdj       , 0,                          m_uiNumPartition * sizeof( *m_ChromaQpAdj ) );
   for(UInt comp=0; comp<MAX_NUM_COMPONENT; comp++)
@@ -485,6 +521,7 @@ Void TComDataCU::initEstData( const UInt uiDepth, const Int qp, const Bool bTran
     m_puhWidth  [ui]    = uhWidth;					//设置当前宽度
     m_puhHeight [ui]    = uhHeight;					//设置当前高度
     m_puhTrIdx  [ui]    = 0;
+
     for(UInt comp=0; comp<MAX_NUM_COMPONENT; comp++)
     {
       m_crossComponentPredictionAlpha[comp][ui] = 0;
@@ -497,6 +534,14 @@ Void TComDataCU::initEstData( const UInt uiDepth, const Int qp, const Bool bTran
     m_CUTransquantBypass[ui] = bTransquantBypass;
     m_pbIPCMFlag[ui]    = 0;
     m_phQP[ui]          = qp;
+
+#if COST_RECORD
+	m_puhCost[ui] = MAX_DOUBLE;
+	m_puhDistortion[ui] = 0;
+	m_puhBits[ui] = 0;
+	m_puhBins[ui] = 0;
+#endif
+
     m_ChromaQpAdj[ui]   = 0;
     m_pbMergeFlag[ui]   = 0;
     m_puhMergeIndex[ui] = 0;
@@ -592,6 +637,13 @@ Void TComDataCU::initSubCU( TComDataCU* pcCU, UInt uiPartUnitIdx, UInt uiDepth, 
     m_CUTransquantBypass[ui] = false;
     m_ChromaQpAdj[ui] = 0;
 
+#if COST_RECORD
+	m_puhCost[ui] = MAX_DOUBLE;
+	m_puhDistortion[ui] = 0;
+	m_puhBits[ui] = 0;
+	m_puhBins[ui] = 0;
+#endif
+
     for(UInt i=0; i<NUM_REF_PIC_LIST_01; i++)
     {
       const RefPicList rpl=RefPicList(i);
@@ -656,6 +708,13 @@ Void TComDataCU::copySubCU( TComDataCU* pcCU, UInt uiAbsPartIdx, UInt uiDepth )
   m_uiCUPelY           = pcCU->getCUPelY() + g_auiRasterToPelY[ g_auiZscanToRaster[uiAbsPartIdx] ];
 
   m_skipFlag=pcCU->getSkipFlag()          + uiPart;
+
+#if COST_RECORD
+  m_puhCost			   = pcCU->getCost()		  + uiPart;
+  m_puhDistortion	   = pcCU->getDistortion()	  + uiPart;
+  m_puhBits			   = pcCU->getBits()		  + uiPart;
+  m_puhBins			   = pcCU->getBins()		  + uiPart;
+#endif
 
   m_phQP=pcCU->getQP()                    + uiPart;
   m_ChromaQpAdj = pcCU->getChromaQpAdj()  + uiPart;
@@ -749,6 +808,13 @@ Void TComDataCU::copyInterPredInfoFrom    ( TComDataCU* pcCU, UInt uiAbsPartIdx,
 
   m_skipFlag           = pcCU->getSkipFlag ()             + uiAbsPartIdx;
 
+#if COST_RECORD
+  m_puhCost			   = pcCU->getCost()				  + uiAbsPartIdx;
+  m_puhDistortion	   = pcCU->getDistortion()			  + uiAbsPartIdx;
+  m_puhBits			   = pcCU->getBits()				  + uiAbsPartIdx;
+  m_puhBins			   = pcCU->getBins()				  + uiAbsPartIdx;
+#endif
+
   m_pePartSize         = pcCU->getPartitionSize ()        + uiAbsPartIdx;
   m_pePredMode         = pcCU->getPredictionMode()        + uiAbsPartIdx;
   m_ChromaQpAdj        = pcCU->getChromaQpAdj()           + uiAbsPartIdx;
@@ -787,6 +853,21 @@ Void TComDataCU::copyPartFrom( TComDataCU* pcCU, UInt uiPartUnitIdx, UInt uiDept
   Int iSizeInBool   = sizeof( Bool  ) * uiNumPartition;
 
   Int sizeInChar  = sizeof( Char ) * uiNumPartition;
+
+#if COST_RECORD
+
+  for (int i = 0; i < uiNumPartition; i++) {
+	  m_puhCost			[i + uiOffset] = pcCU->getCost()[i];
+	  m_puhDistortion	[i + uiOffset] = pcCU->getDistortion()[i];
+	  m_puhBits			[i + uiOffset] = pcCU->getBits()[i];
+	  m_puhBins			[i + uiOffset] = pcCU->getBins()[i];
+  }
+  //memcpy(m_puhCost + uiOffset,	   pcCU->getCost(),			  sizeof(*m_puhCost) * uiNumPartition);
+  //memcpy(m_puhDistortion + uiOffset, pcCU->getDistortion(),	  sizeof(*m_puhDistortion) * uiNumPartition);
+  //memcpy(m_puhBits + uiOffset,	   pcCU->getBits(),			  sizeof(*m_puhBits) * uiNumPartition);
+  //memcpy(m_puhBins + uiOffset,	   pcCU->getBins(),			  sizeof(*m_puhBins) * uiNumPartition);
+#endif
+
   memcpy( m_skipFlag   + uiOffset, pcCU->getSkipFlag(),       sizeof( *m_skipFlag )   * uiNumPartition );
   memcpy( m_phQP       + uiOffset, pcCU->getQP(),             sizeInChar                        );
   memcpy( m_pePartSize + uiOffset, pcCU->getPartitionSize(),  sizeof( *m_pePartSize ) * uiNumPartition );
@@ -870,6 +951,21 @@ Void TComDataCU::copyToPic( UChar uhDepth )
   Int iSizeInBool   = sizeof( Bool  ) * m_uiNumPartition;
   Int sizeInChar  = sizeof( Char ) * m_uiNumPartition;
 
+#if COST_RECORD
+
+  for (int i = 0; i < m_uiNumPartition; i++) {
+
+	  pCtu->getCost()		[i + m_absZIdxInCtu] = m_puhCost[i];
+	  pCtu->getDistortion()	[i + m_absZIdxInCtu] = m_puhDistortion[i];
+	  pCtu->getBits()		[i + m_absZIdxInCtu] = m_puhBits[i];
+	  pCtu->getBins()		[i + m_absZIdxInCtu] = m_puhBins[i];
+  }
+  //memcpy( pCtu->getCost() + m_absZIdxInCtu	,		 m_puhCost,			sizeof(*m_puhCost) * m_uiNumPartition);
+  //memcpy( pCtu->getDistortion() + m_absZIdxInCtu,	 m_puhDistortion ,	sizeof(*m_puhDistortion) * m_uiNumPartition);
+  //memcpy( pCtu->getBits() + m_absZIdxInCtu,			 m_puhBits,			sizeof(*m_puhBits) * m_uiNumPartition);
+  //memcpy( pCtu->getBins() + m_absZIdxInCtu,			 m_puhBins,			sizeof(*m_puhBins) * m_uiNumPartition);
+#endif
+
   memcpy( pCtu->getSkipFlag() + m_absZIdxInCtu, m_skipFlag, sizeof( *m_skipFlag ) * m_uiNumPartition );
 
   memcpy( pCtu->getQP() + m_absZIdxInCtu, m_phQP, sizeInChar  );
@@ -950,6 +1046,21 @@ Void TComDataCU::copyToPic( UChar uhDepth, UInt uiPartIdx, UInt uiPartDepth )
   Int iSizeInBool   = sizeof( Bool   ) * uiQNumPart;
   Int sizeInChar  = sizeof( Char ) * uiQNumPart;
 
+
+#if COST_RECORD
+  for (int i = 0; i < m_uiNumPartition; i++) {
+
+	  pCtu->getCost()		[i + uiPartOffset]			 = m_puhCost[i];
+	  pCtu->getDistortion()	[i + uiPartOffset]			 = m_puhDistortion[i];
+	  pCtu->getBits()		[i + uiPartOffset]			 = m_puhBits[i];
+	  pCtu->getBins()		[i+ uiPartOffset]			 = m_puhBins[i];
+  }
+
+  //memcpy(pCtu->getCost()		+ uiPartOffset,		m_puhCost,			sizeof(*m_puhCost) * m_uiNumPartition);
+  //memcpy(pCtu->getDistortion()	+ uiPartOffset,		m_puhDistortion,	sizeof(*m_puhDistortion) * m_uiNumPartition);
+  //memcpy(pCtu->getBits()		+ uiPartOffset,		m_puhBits,			sizeof(*m_puhBits) * m_uiNumPartition);
+  //memcpy(pCtu->getBins()		+ uiPartOffset,		m_puhBins,			sizeof(*m_puhBins) * m_uiNumPartition);
+#endif
   memcpy( pCtu->getSkipFlag()       + uiPartOffset, m_skipFlag,   sizeof( *m_skipFlag )   * uiQNumPart );
 
   memcpy( pCtu->getQP() + uiPartOffset, m_phQP, sizeInChar );
@@ -1723,6 +1834,40 @@ Void TComDataCU::setPredModeSubParts( PredMode eMode, UInt uiAbsPartIdx, UInt ui
   assert( sizeof( *m_pePredMode) == 1 );
   memset( m_pePredMode + uiAbsPartIdx, eMode, m_pcPic->getNumPartitionsInCtu() >> ( 2 * uiDepth ) );
 }
+
+#if COST_RECORD
+Void TComDataCU::setCostSubParts(Double cost, UInt uiAbsPartIdx, UInt depth)
+{
+	for (int i = 0; i < m_pcPic->getNumPartitionsInCtu() >> (2 * depth); i++) {
+		m_puhCost[uiAbsPartIdx + i] = cost;
+	}
+}
+
+Void TComDataCU::setDistortionSubParts(Distortion distortion, UInt uiAbsPartIdx, UInt depth)
+{
+	//memset(m_puhDistortion + uiAbsPartIdx, distortion, m_pcPic->getNumPartitionsInCtu() >> (2 * depth));
+	for (int i = 0; i < m_pcPic->getNumPartitionsInCtu() >> (2 * depth); i++) {
+		m_puhDistortion[uiAbsPartIdx + i] = distortion;
+	}
+}
+
+Void TComDataCU::setBitsSubParts(UInt bits, UInt uiAbsPartIdx, UInt depth)
+{
+	//memset(m_puhBits + uiAbsPartIdx, bits, m_pcPic->getNumPartitionsInCtu() >> (2 * depth));
+	for (int i = 0; i < m_pcPic->getNumPartitionsInCtu() >> (2 * depth); i++) {
+		m_puhBits[uiAbsPartIdx + i] = bits;
+	}
+}
+
+Void TComDataCU::setBinsSubParts(UInt bins, UInt uiAbsPartIdx, UInt depth)
+{
+	for (int i = 0; i < m_pcPic->getNumPartitionsInCtu() >> (2 * depth); i++) {
+		m_puhBins[uiAbsPartIdx + i] = bins;
+	}
+	//memset(m_puhBins + uiAbsPartIdx, bins, m_pcPic->getNumPartitionsInCtu() >> (2 * depth));
+}
+#endif
+
 
 Void TComDataCU::setChromaQpAdjSubParts( UChar val, Int absPartIdx, Int depth )
 {

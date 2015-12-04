@@ -88,6 +88,13 @@ private:
   UChar*        m_puhDepth;           ///< array of depths
   Int           m_unitSize;           ///< size of a "minimum partition"
 
+#if COST_RECORD
+  Double*       m_puhCost;			  ///< array of costs
+  Distortion*   m_puhDistortion;	  ///< array of distortion
+  UInt*         m_puhBits;			  ///< array of bits
+  UInt *        m_puhBins;			  ///< array of bins
+#endif
+
   // -------------------------------------------------------------------------------------------------------------------
   // CU data
   // -------------------------------------------------------------------------------------------------------------------
@@ -217,7 +224,37 @@ public:
   UChar         getDepth              ( UInt uiIdx ) const      { return m_puhDepth[uiIdx]; }
   Void          setDepth              ( UInt uiIdx, UChar  uh ) { m_puhDepth[uiIdx] = uh;   }
 
-  Void          setDepthSubParts      ( UInt uiDepth, UInt uiAbsPartIdx );
+  Void          setDepthSubParts      ( UInt uiDepth, UInt uiAbsPartIdx );      
+	
+#if COST_RECORD
+  ///< sum of partition RD costs
+  Double*        getCost() { return m_puhCost; }
+  Double         getCost(UInt uiIdx) const { return m_puhCost[uiIdx]; }
+  Void           setCost(UInt uiIdx, Double  cost) { m_puhCost[uiIdx] = cost; }
+
+  Void setCostSubParts(Double cost, UInt uiAbsPartIdx, UInt depth);
+
+  ///< sum of partition distortion
+  Distortion*    getDistortion() { return m_puhDistortion; }
+  Distortion     getDistortion(UInt uiIdx) const { return m_puhDistortion[uiIdx]; }
+  Void           setDistortion(UInt uiIdx, Distortion  distortion)	{ m_puhDistortion[uiIdx] = distortion; }
+
+  Void setDistortionSubParts(Distortion distortion, UInt uiAbsPartIdx, UInt depth);
+
+  ///< sum of partition bits
+  UInt*          getBits() { return m_puhBits; }
+  UInt           getBits(UInt uiIdx) const { return m_puhBits[uiIdx]; }
+  Void           setBits(UInt uiIdx, UInt  bits) { m_puhBits[uiIdx] = bits; }
+
+  Void setBitsSubParts(UInt bits, UInt uiAbsPartIdx, UInt depth);
+
+  ///< sum of partition bin
+  UInt*          getBins() { return m_puhBins; }
+  UInt           getBins(UInt uiIdx) const { return m_puhBins[uiIdx]; }
+  Void           setBins(UInt uiIdx, UInt  bins) { m_puhBins[uiIdx] = bins; }
+
+  Void setBinsSubParts(UInt bins, UInt uiAbsPartIdx, UInt depth);
+#endif
 
   // -------------------------------------------------------------------------------------------------------------------
   // member functions for CU data
