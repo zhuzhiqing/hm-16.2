@@ -516,6 +516,9 @@ public:
 
   UInt          getCoefScanIdx(const UInt uiAbsPartIdx, const UInt uiWidth, const UInt uiHeight, const ComponentID compID) const ;
 
+
+  //member functions for CU analysis
+
 };
 
 namespace RasterAddress

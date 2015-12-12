@@ -844,6 +844,28 @@ Void TEncSlice::compressSlice( TComPic* pcPic )
     m_pppcRDSbacCoder[0][CI_CURR_BEST]->resetBits();
     pRDSbacCoder->setBinsCoded( 0 );
 
+
+	////统计CU的编码信息
+	//int totalPartitonNum = pCtu->getPic()->getNumPartitionsInCtu();
+
+	//TComDataCU * pCLCU = pCtu->getCUColocated(REF_PIC_LIST_0);
+	//
+	//if (pCLCU != NULL) {
+	//	for (int i = 0; i < totalPartitonNum;) {
+
+	//		if (pCLCU->getDepth(i) > pCtu->getDepth(i)) {			//CLCU 比当前CU小
+
+	//		}
+	//		else if (pCLCU->getDepth(i) == pCtu->getDepth(i)) {		//CLCU与当前CU一样大
+
+	//		}
+	//		else {													//CLCU比当前CU大
+	//		}
+	//		i += totalPartitonNum >> (pCtu->getDepth(i) * 2);		//i，移动小CU块的偏移zScan
+	//	}
+	//}
+
+
     // encode CTU and calculate the true bit counters.
     m_pcCuEncoder->encodeCtu( pCtu );							//这里可以看出来pcCU是存储着需要编码的信息
 

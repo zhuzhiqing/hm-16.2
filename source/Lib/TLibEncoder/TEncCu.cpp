@@ -41,8 +41,10 @@
 #include "TEncAnalyze.h"
 #include "TLibCommon/Debug.h"
 
+#include <map>
 #include <cmath>
 #include <algorithm>
+#include <set>
 using namespace std;
 
 
@@ -689,6 +691,98 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalBins() += ((TEncBinCABAC *)((TEncSbac*)m_pcEntropyCoder->m_pcEntropyCoderIf)->getEncBinIf())->getBinsCoded();
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
+
+	set<PartSize> sCand;
+
+	//参考帧中的CLCU
+	TComDataCU * pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
+
+
+
+	if (pCLCU != NULL && rpcBestCU->getSlice()->getSliceType() != I_SLICE) {
+
+		//当前CU左上角在CTU
+		int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
+
+		if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
+		{				
+			//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
+			if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+			{
+				map<PartSize,int> subPartSizeTyeps;
+				map<PartSize, int> ::iterator it;
+
+				int numSubCu = 0;		//子CU数量
+				int numCandate = 0;		//候选子CU数量
+				bool isContais = false;	//是否包含
+
+				int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
+				for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu+totalPartitonNum;)
+				{
+					it = subPartSizeTyeps.find(pCLCU->getPartitionSize(pos));
+
+					if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0))
+						isContais = true;
+
+					if (it == subPartSizeTyeps.end())
+					{
+						subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;//.insert(pCLCU->getPartitionSize(0),1);
+						numCandate++;
+					}
+					else
+						subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
+
+					pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
+					numSubCu++;
+				}
+
+				ofstream rcumiddle;
+				rcumiddle.open("rcuEqual1", ios::app);
+
+				rcumiddle << rpcBestCU->getSlice()->getPOC() << '\t' << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
+					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t'<<0 << '\t' << numCandate <<'\t'<<'-'<<'\t' << '-' << '\t' << numSubCu<<'\t';
+
+				for (int i = 0; i < NUMBER_OF_PART_SIZES;i++)
+				{
+					it = subPartSizeTyeps.find((PartSize)i);
+					if (it == subPartSizeTyeps.end())
+						rcumiddle << 0 << '\t';
+					else
+						rcumiddle << (*it).second << '\t';
+				}
+
+				rcumiddle << endl;
+				rcumiddle.close();
+			}
+		}
+		else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))
+		{			//CLCU与当前CU一样大
+			if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+			{
+				/*sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));*/
+				ofstream rcumiddle;
+				rcumiddle.open("rcuEqual1",ios::app);
+
+				bool isContais = false;	//是否包含
+				if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0))
+					isContais = true;
+
+				rcumiddle << rpcBestCU->getSlice()->getPOC() << '\t' << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
+					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t' << 1 << '\t' << 1 << '\t'
+					<< (int)pCLCU->getDepth(zorderIdxInCtu) << '\t' << pCLCU->getPartitionSize(zorderIdxInCtu) << '\t'
+					<< '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t'<<endl;
+
+				rcumiddle.close();
+			}
+		}
+		else
+		{																	//CLCU比当前CU大
+
+		}
+	}
+
+
+
     // Early CU determination
     if( m_pcEncCfg->getUseEarlyCU() && rpcBestCU->isSkipped(0) )
     {
@@ -1329,6 +1423,14 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
 #endif
 
   xCheckDQP( rpcTempCU );
+
+#if COST_RECORD
+  rpcTempCU->setCostSubParts(rpcTempCU->getTotalCost(), 0, uhDepth);
+  rpcTempCU->setDistortionSubParts(rpcTempCU->getTotalDistortion(), 0, uhDepth);
+  rpcTempCU->setBitsSubParts(rpcTempCU->getTotalBits(), 0, uhDepth);
+  rpcTempCU->setBinsSubParts(rpcTempCU->getTotalBins(), 0, uhDepth);
+#endif
+
   xCheckBestMode(rpcBestCU, rpcTempCU, uhDepth DEBUG_STRING_PASS_INTO(sDebug) DEBUG_STRING_PASS_INTO(sTest));
 }
 
@@ -1414,6 +1516,12 @@ Void TEncCu::xCheckRDCostIntra( TComDataCU *&rpcBestCU,
 
   cost = rpcTempCU->getTotalCost();
 
+#if COST_RECORD
+  rpcTempCU->setCostSubParts(rpcTempCU->getTotalCost(), 0, rpcTempCU->getDepth(0));
+  rpcTempCU->setDistortionSubParts(rpcTempCU->getTotalDistortion(), 0, rpcTempCU->getDepth(0));
+  rpcTempCU->setBitsSubParts(rpcTempCU->getTotalBits(), 0, rpcTempCU->getDepth(0));
+  rpcTempCU->setBinsSubParts(rpcTempCU->getTotalBins(), 0, rpcTempCU->getDepth(0));
+#endif
   xCheckBestMode(rpcBestCU, rpcTempCU, uiDepth DEBUG_STRING_PASS_INTO(sDebug) DEBUG_STRING_PASS_INTO(sTest));
 }
 
