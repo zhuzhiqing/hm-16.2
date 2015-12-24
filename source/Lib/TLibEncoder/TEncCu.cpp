@@ -691,8 +691,9 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalBins() += ((TEncBinCABAC *)((TEncSbac*)m_pcEntropyCoder->m_pcEntropyCoderIf)->getEncBinIf())->getBinsCoded();
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
-
+/*
 	set<PartSize> sCand;
+
 
 	//参考帧中的CLCU
 	TComDataCU * pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
@@ -759,7 +760,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		{			//CLCU与当前CU一样大
 			if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 			{
-				/*sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));*/
+				//sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));
 				ofstream rcumiddle;
 				rcumiddle.open("rcuEqual1",ios::app);
 
@@ -780,7 +781,33 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 		}
 	}
+	*/
 
+
+	//统计当前CU与上一层次CU之间的PU选择的相关性
+	if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
+	{
+		ofstream level_relationship;
+		level_relationship.open("level_relationship", ios::app);
+
+		TComDataCU * biggerCU;
+
+		if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
+			biggerCU = m_ppcBestCU[uiDepth - 1];
+		else
+			biggerCU = m_ppcTempCU[uiDepth - 1];
+
+		int index;
+		index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth)*2)))
+			/((1 << ((4 - uiDepth) * 2)));
+
+		level_relationship << rpcBestCU->getSlice()->getPOC() << '\t' << (int )uiDepth << '\t'<< index<< '\t' << rpcBestCU->getPredictionMode(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
+
+			<< biggerCU->getPredictionMode(0) << '\t' <<biggerCU->getPartitionSize(0) << '\t' <<biggerCU->getTotalCost()<<'\t' ;		//上一层次的PU模式,上一层次RDCOst
+
+		level_relationship << endl;
+		level_relationship.close();
+	}
 
 
     // Early CU determination
