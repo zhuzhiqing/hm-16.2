@@ -787,9 +787,6 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 	//统计当前CU与上一层次CU之间的PU选择的相关性
 	if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
 	{
-		ofstream level_relationship;
-		level_relationship.open("level_relationship", ios::app);
-
 		TComDataCU * biggerCU;
 
 		if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
@@ -797,16 +794,22 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		else
 			biggerCU = m_ppcTempCU[uiDepth - 1];
 
-		int index;
-		index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth)*2)))
-			/((1 << ((4 - uiDepth) * 2)));
+		if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
 
-		level_relationship << rpcBestCU->getSlice()->getPOC() << '\t' << (int )uiDepth << '\t'<< index<< '\t' << rpcBestCU->getPredictionMode(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
+			ofstream level_relationship;
+			level_relationship.open("level_relationship", ios::app);
 
-			<< biggerCU->getPredictionMode(0) << '\t' <<biggerCU->getPartitionSize(0) << '\t' <<biggerCU->getTotalCost()<<'\t' ;		//上一层次的PU模式,上一层次RDCOst
+			int index;
+			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+				/ ((1 << ((4 - uiDepth) * 2)));
 
-		level_relationship << endl;
-		level_relationship.close();
+			level_relationship << rpcBestCU->getSlice()->getPOC() << '\t' << (int)uiDepth << '\t' << index << '\t' << rpcBestCU->getPredictionMode(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
+
+				<< biggerCU->getPredictionMode(0) << '\t' << biggerCU->getPartitionSize(0) << '\t' << biggerCU->getTotalCost() << '\t';		//上一层次的PU模式,上一层次RDCOst
+
+			level_relationship << endl;
+			level_relationship.close();
+		}
 	}
 
 
