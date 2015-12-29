@@ -691,8 +691,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalBins() += ((TEncBinCABAC *)((TEncSbac*)m_pcEntropyCoder->m_pcEntropyCoderIf)->getEncBinIf())->getBinsCoded();
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
-/*
-	set<PartSize> sCand;
+
+//	set<PartSize> sCand;
 
 
 	//参考帧中的CLCU
@@ -738,10 +738,12 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				}
 
 				ofstream rcumiddle;
-				rcumiddle.open("rcuEqual1", ios::app);
+				rcumiddle.open("clcu_relationship", ios::app);
 
 				rcumiddle << rpcBestCU->getSlice()->getPOC() << '\t' << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
-					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t'<<0 << '\t' << numCandate <<'\t'<<'-'<<'\t' << '-' << '\t' << numSubCu<<'\t';
+					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t'<<0 << '\t' << numCandate <<'\t'<<'-'<<'\t' << '-' << '\t' 
+					<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getVer()<<'\t'
+					<< numSubCu << '\t';
 
 				for (int i = 0; i < NUMBER_OF_PART_SIZES;i++)
 				{
@@ -762,7 +764,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			{
 				//sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));
 				ofstream rcumiddle;
-				rcumiddle.open("rcuEqual1",ios::app);
+				rcumiddle.open("clcu_relationship",ios::app);
 
 				bool isContais = false;	//是否包含
 				if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0))
@@ -771,6 +773,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				rcumiddle << rpcBestCU->getSlice()->getPOC() << '\t' << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
 					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t' << 1 << '\t' << 1 << '\t'
 					<< (int)pCLCU->getDepth(zorderIdxInCtu) << '\t' << pCLCU->getPartitionSize(zorderIdxInCtu) << '\t'
+					<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getVer() << '\t'
 					<< '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t'<<endl;
 
 				rcumiddle.close();
@@ -781,36 +784,36 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 		}
 	}
-	*/
+	
 
 
-	//统计当前CU与上一层次CU之间的PU选择的相关性
-	if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
-	{
-		TComDataCU * biggerCU;
+	////统计当前CU与上一层次CU之间的PU选择的相关性
+	//if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
+	//{
+	//	TComDataCU * biggerCU;
 
-		if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
-			biggerCU = m_ppcBestCU[uiDepth - 1];
-		else
-			biggerCU = m_ppcTempCU[uiDepth - 1];
+	//	if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
+	//		biggerCU = m_ppcBestCU[uiDepth - 1];
+	//	else
+	//		biggerCU = m_ppcTempCU[uiDepth - 1];
 
-		if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
+	//	if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
 
-			ofstream level_relationship;
-			level_relationship.open("level_relationship", ios::app);
+	//		ofstream level_relationship;
+	//		level_relationship.open("level_relationship", ios::app);
 
-			int index;
-			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-				/ ((1 << ((4 - uiDepth) * 2)));
+	//		int index;
+	//		index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+	//			/ ((1 << ((4 - uiDepth) * 2)));
 
-			level_relationship << rpcBestCU->getSlice()->getPOC() << '\t' << (int)uiDepth << '\t' << index << '\t' << rpcBestCU->getPredictionMode(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
+	//		level_relationship << rpcBestCU->getSlice()->getPOC() << '\t' << (int)uiDepth << '\t' << index << '\t' << rpcBestCU->getPredictionMode(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
 
-				<< biggerCU->getPredictionMode(0) << '\t' << biggerCU->getPartitionSize(0) << '\t' << biggerCU->getTotalCost() << '\t';		//上一层次的PU模式,上一层次RDCOst
+	//			<< biggerCU->getPredictionMode(0) << '\t' << biggerCU->getPartitionSize(0) << '\t' << biggerCU->getTotalCost() << '\t';		//上一层次的PU模式,上一层次RDCOst
 
-			level_relationship << endl;
-			level_relationship.close();
-		}
-	}
+	//		level_relationship << endl;
+	//		level_relationship.close();
+	//	}
+	//}
 
 
     // Early CU determination
