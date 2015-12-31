@@ -692,100 +692,124 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
 
-//	set<PartSize> sCand;
+	//	set<PartSize> sCand;
 
+	TComDataCU * pCLCU = NULL;
+	map<PartSize, int> subPartSizeTyeps;
+	map<PartSize, int> ::iterator it;
 
-	//参考帧中的CLCU
-	TComDataCU * pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
+	int numSubCu = 0;		//子CU数量
+	int numCandate = 0;		//候选子CU数量
+	bool isContais = false;	//是否包含
+	bool isContanisWith2Nx2N = false;
+	bool isRecord = false;
 
+	Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
+	int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
 
+	//参考帧方向循环
+	for (Int iRefList = 0; iRefList < iNumPredDir; iRefList++)				//iNumPredDir为预测方向数量
+	{
+		RefPicList  eRefPicList = (iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0);		//后向参考帧	前向
 
-	if (pCLCU != NULL && rpcBestCU->getSlice()->getSliceType() != I_SLICE) {
+																					//循环每个参考帧
+		for (Int iRefIdxTemp = 0; iRefIdxTemp < rpcBestCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTemp++)
+		{
+			pCLCU = rpcBestCU->getSlice()->getRefPic(eRefPicList, iRefIdxTemp)->getCtu(rpcBestCU->getCtuRsAddr());
+			//pCLCU = rpcBestCU->getCUColocated(eRefPicList);
+			if (pCLCU != NULL) {
 
-		//当前CU左上角在CTU
-		int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
+				//当前CU左上角在CTU
+				int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
 
-		if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
-		{				
-			//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
-			if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
-			{
-				map<PartSize,int> subPartSizeTyeps;
-				map<PartSize, int> ::iterator it;
-
-				int numSubCu = 0;		//子CU数量
-				int numCandate = 0;		//候选子CU数量
-				bool isContais = false;	//是否包含
-
-				int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
-				for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu+totalPartitonNum;)
+				if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
 				{
-					it = subPartSizeTyeps.find(pCLCU->getPartitionSize(pos));
-
-					if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0))
-						isContais = true;
-
-					if (it == subPartSizeTyeps.end())
+					//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
+					if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 					{
-						subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;//.insert(pCLCU->getPartitionSize(0),1);
-						numCandate++;
+						isRecord = true;
+
+						for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
+						{
+							it = subPartSizeTyeps.find(pCLCU->getPartitionSize(pos));
+
+							if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0))
+								isContais = true;
+
+							if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0) || pCLCU->getPartitionSize(pos) == SIZE_2Nx2N)
+								isContanisWith2Nx2N = true;
+
+
+							if (it == subPartSizeTyeps.end())
+							{
+								//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;
+								subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1 << (4 - pCLCU->getDepth(pos)) * 2;
+								numCandate++;
+							}
+							else
+							{
+								//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
+								subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second + (1 << (4 - pCLCU->getDepth(pos)) * 2);
+							}
+							pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
+							numSubCu++;
+						}
 					}
-					else
-						subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
 
-					pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
-					numSubCu++;
 				}
-
-				ofstream rcumiddle;
-				rcumiddle.open("clcu_relationship", ios::app);
-
-				rcumiddle << rpcBestCU->getSlice()->getPOC() << '\t' << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
-					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t'<<0 << '\t' << numCandate <<'\t'<<'-'<<'\t' << '-' << '\t' 
-					<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getVer()<<'\t'
-					<< numSubCu << '\t';
-
-				for (int i = 0; i < NUMBER_OF_PART_SIZES;i++)
+				else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))			//CLCU与当前CU一样大
 				{
-					it = subPartSizeTyeps.find((PartSize)i);
-					if (it == subPartSizeTyeps.end())
-						rcumiddle << 0 << '\t';
-					else
-						rcumiddle << (*it).second << '\t';
+					if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+					{
+						isRecord = true;
+
+						if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0))
+						{
+							isContais = true;
+						}
+
+						if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0) || pCLCU->getPartitionSize(zorderIdxInCtu) == SIZE_2Nx2N)
+							isContanisWith2Nx2N = true;
+
+						it = subPartSizeTyeps.find(pCLCU->getPartitionSize(zorderIdxInCtu));
+
+						if (it == subPartSizeTyeps.end())
+						{
+							//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;
+							subPartSizeTyeps[pCLCU->getPartitionSize(zorderIdxInCtu)] = 1 << (4 - pCLCU->getDepth(zorderIdxInCtu)) * 2;
+							numCandate++;
+						}
+						else
+						{
+							//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
+							subPartSizeTyeps[pCLCU->getPartitionSize(zorderIdxInCtu)] = (*it).second + (1 << (4 - pCLCU->getDepth(zorderIdxInCtu)) * 2);
+						}
+					}
 				}
-
-				rcumiddle << endl;
-				rcumiddle.close();
 			}
-		}
-		else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))
-		{			//CLCU与当前CU一样大
-			if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
-			{
-				//sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));
-				ofstream rcumiddle;
-				rcumiddle.open("clcu_relationship",ios::app);
-
-				bool isContais = false;	//是否包含
-				if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0))
-					isContais = true;
-
-				rcumiddle << rpcBestCU->getSlice()->getPOC() << '\t' << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
-					<< pCLCU->getSlice()->getPOC() << '\t' << isContais << '\t' << 1 << '\t' << 1 << '\t'
-					<< (int)pCLCU->getDepth(zorderIdxInCtu) << '\t' << pCLCU->getPartitionSize(zorderIdxInCtu) << '\t'
-					<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getVer() << '\t'
-					<< '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t'<<endl;
-
-				rcumiddle.close();
-			}
-		}
-		else
-		{																	//CLCU比当前CU大
-
 		}
 	}
-	
 
+	if (isRecord) {
+		ofstream rcumiddle;
+		rcumiddle.open("clcu_relationship", ios::app);
+
+		rcumiddle << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'			//当前深度   当前分块模式
+			<< isContais << '\t' << numCandate << '\t';														//是否包含	候选模式数量
+
+		for (int i = 0; i < NUMBER_OF_PART_SIZES; i++)
+		{
+			it = subPartSizeTyeps.find((PartSize)i);
+			if (it == subPartSizeTyeps.end())
+				rcumiddle << 0 << '\t';
+			else
+				rcumiddle << (double)((*it).second) / (double)(totalPartitonNum) << '\t';
+		}
+
+
+		rcumiddle << endl;
+		rcumiddle.close();
+	}
 
 	////统计当前CU与上一层次CU之间的PU选择的相关性
 	//if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
