@@ -795,7 +795,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		rcumiddle.open("clcu_relationship", ios::app);
 
 		rcumiddle << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'			//当前深度   当前分块模式
-			<< isContais << '\t' << numCandate << '\t';														//是否包含	候选模式数量
+			<< isContais << '\t'<< isContanisWith2Nx2N << '\t' << numCandate << '\t';														//是否包含	包含2N*2N模式时是否包含 候选模式数量
 
 		for (int i = 0; i < NUMBER_OF_PART_SIZES; i++)
 		{
