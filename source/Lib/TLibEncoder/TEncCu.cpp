@@ -692,6 +692,22 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
 
+	/**
+	* 第一个坐标大块分割模式
+	* 第二个坐标，小块在大块中的坐标
+	* 值：小块最终取值
+	*/
+	int splitMap[][4] = {
+		{ 0,0,0,0 },
+		{ 0,0,0,0 },
+		{ 0,0,0,0 },
+		{ 0,0,0,0 },
+		{ 1,1,0,0 },
+		{ 0,0,1,1 },
+		{ 2,0,2,0 },
+		{ 0,2,0,2 }
+	};
+
 	//	set<PartSize> sCand;
 
 	TComDataCU * pCLCU = NULL;
@@ -704,7 +720,12 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 	bool isContanisWith2Nx2N = false;
 	bool isRecord = false;
 
-	double absMVX = 0,absMVY = 0;
+
+
+	//当前CU左上角在CTU
+	int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
+
+//	double absMVX = 0,absMVY = 0;
 
 
 	Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
@@ -721,9 +742,6 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			pCLCU = rpcBestCU->getSlice()->getRefPic(eRefPicList, iRefIdxTemp)->getCtu(rpcBestCU->getCtuRsAddr());
 			//pCLCU = rpcBestCU->getCUColocated(eRefPicList);
 			if (pCLCU != NULL) {
-
-				//当前CU左上角在CTU
-				int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
 
 				if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
 				{
@@ -793,33 +811,72 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				{
 					if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 					{
-						//isRecord = true;
-						if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上
+						isRecord = true;
+						if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上,只要当前最佳模式为2Nx2N则符合
 						{
+							if (rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N) {		
+								isContais = true;
+								isContanisWith2Nx2N = true;
+							}
+							
+							it = subPartSizeTyeps.find(SIZE_2Nx2N);
+							if (it == subPartSizeTyeps.end())
+							{
+								subPartSizeTyeps[SIZE_2Nx2N] = 1 << (4 - uiDepth) * 2;
+							}
+							else
+							{
+								subPartSizeTyeps[SIZE_2Nx2N] = (*it).second + (1 << (4 - uiDepth) * 2);
+							}
 
 						}
 						else																	//大一个级别
 						{
+							int index = -1; //小块在大块中的坐标
+							index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+								/ ((1 << ((4 - uiDepth) * 2)));
+
 							
+
+							if(splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index] == rpcBestCU->getPartitionSize(0))
+								isContais = true;
+
+							if (splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index] == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0)== SIZE_2Nx2N)
+								isContanisWith2Nx2N = true;
+
+							it = subPartSizeTyeps.find(SIZE_2Nx2N);
+							if (it == subPartSizeTyeps.end())
+							{
+								subPartSizeTyeps[(PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]] = 1 << (4 - uiDepth) * 2;
+							}
+							else
+							{
+								subPartSizeTyeps[(PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]] = (*it).second + (1 << (4 - uiDepth) * 2);
+							}
 						}
 					}
 				}
 
-				absMVX += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsHor();
-				absMVY += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsVer();
+				//absMVX += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsHor();
+				//absMVY += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsVer();
 			}
 		}
 	}
 
-	absMVX /= rpcBestCU->getSlice()->getNumRefIdx(REF_PIC_LIST_0)*iNumPredDir;
-	absMVY /= rpcBestCU->getSlice()->getNumRefIdx(REF_PIC_LIST_0)*iNumPredDir;
+	//absMVX /= rpcBestCU->getSlice()->getNumRefIdx(REF_PIC_LIST_0)*iNumPredDir;
+	//absMVY /= rpcBestCU->getSlice()->getNumRefIdx(REF_PIC_LIST_0)*iNumPredDir;
 
 	if (isRecord) {
 		ofstream rcumiddle;
 		rcumiddle.open("clcu_relationship", ios::app);
 
+		pCLCU = rpcBestCU->getSlice()->getRefPic(REF_PIC_LIST_0, 0)->getCtu(rpcBestCU->getCtuRsAddr());
+
 		rcumiddle << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'			//当前深度   当前分块模式
-			<< isContais << '\t'<< isContanisWith2Nx2N << '\t' << numCandate << '\t'<<absMVX<<'\t'<<absMVY<<'\t';														//是否包含	包含2N*2N模式时是否包含 候选模式数量
+	//		<< isContais << '\t'<< isContanisWith2Nx2N << '\t' << numCandate << '\t'<<absMVX<<'\t'<<absMVY<<'\t';														//是否包含	包含2N*2N模式时是否包含 候选模式数量
+			<< isContais << '\t' << isContanisWith2Nx2N << '\t' << numCandate << '\t'
+			<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getVer() << '\t'
+			<< rpcBestCU->getCUColocated(REF_PIC_LIST_0)->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getHor() << '\t' << rpcBestCU->getCUColocated(REF_PIC_LIST_0)->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getVer() << '\t';
 
 		for (int i = 0; i < NUMBER_OF_PART_SIZES; i++)
 		{
@@ -827,13 +884,15 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			if (it == subPartSizeTyeps.end())
 				rcumiddle << 0 << '\t';
 			else
-				rcumiddle << (double)((*it).second) / (double)((totalPartitonNum>>1)*iNumPredDir*rpcBestCU->getSlice()->getNumRefIdx(REF_PIC_LIST_1)) << '\t';
+				rcumiddle << (double)((*it).second) / (double)((totalPartitonNum)*iNumPredDir*rpcBestCU->getSlice()->getNumRefIdx(REF_PIC_LIST_1)) << '\t';
 		}
 
 
 		rcumiddle << endl;
 		rcumiddle.close();
 	}
+	pCLCU = NULL;
+	subPartSizeTyeps.clear();
 
 	////统计当前CU与上一层次CU之间的PU选择的相关性
 	//if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
