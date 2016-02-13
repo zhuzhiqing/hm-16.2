@@ -541,6 +541,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 									for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
 									{
 										sCand.insert(pCLCU->getPartitionSize(pos));
+										pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
 									}
 								}
 
