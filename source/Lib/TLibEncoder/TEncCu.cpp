@@ -454,7 +454,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 	  set<PartSize> sCand;		//候选集
 	  set<PartSize>::iterator sCand_it;
 
-	  double Level_Relationship_level_cost_throld = 2171;	//层次相关性RDCost阈值
+	  double Level_Relationship_level_cost_throld = 21710;	//层次相关性RDCost阈值
 
     for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
     {
