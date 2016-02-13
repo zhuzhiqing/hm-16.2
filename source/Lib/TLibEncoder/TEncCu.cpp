@@ -508,6 +508,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 			sCand.insert(predict_partSize);		//添加候选集
 
+			Level_Relationship_level_cost_throld = (maxValue - minValue) *0.2 + minValue;
 			if (Level_Relationship_level_cost_throld >= cost_normalized) {  //判断是否满足阈值条件
 				isPredict_Level_Relationship = true;
 			}
@@ -779,7 +780,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 
 	//采样
-	if (rpcBestCU->getSlice()->getPOC() <= sample_frame_num) {
+//	if (rpcBestCU->getSlice()->getPOC() <= sample_frame_num) {
+	{
 		if (rpcBestCU->getSlice()->getSliceType() != I_SLICE) {
 			Double cost_normal = rpcBestCU->getTotalCost() / (256 / (pow(2, ((uiDepth)* 2))));
 
