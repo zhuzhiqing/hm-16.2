@@ -428,6 +428,34 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
   if ( ( uiRPelX < rpcBestCU->getSlice()->getSPS()->getPicWidthInLumaSamples() ) &&					//HM10.0允许处理的最小亮度采样宽度
        ( uiBPelY < rpcBestCU->getSlice()->getSPS()->getPicHeightInLumaSamples() ) )					//HM10.0允许处理的最小亮度采样高度  
   {
+	  /**
+	  * 第一个坐标大块分割模式
+	  * 第二个坐标，小块在大块中的坐标
+	  * 值：小块最终取值
+	  */
+	  int splitMap[][4] = {
+		  { 0,0,0,0 },
+		  { 0,0,0,0 },
+		  { 0,0,0,0 },
+		  { 0,0,0,0 },
+		  { 1,1,0,0 },
+		  { 0,0,1,1 },
+		  { 2,0,2,0 },
+		  { 0,2,0,2 }
+	  };
+
+	  //采样变量
+	  const static Int sample_frame_num = 5;
+	  static Double minValue = MAX_DOUBLE;
+	  static Double maxValue = 0.01;
+
+	  bool isPredict = true;		//是否具备预测的条件
+	  bool isPredict_Level_Relationship = false;  //是否满足层次相关性的条件
+	  set<PartSize> sCand;		//候选集
+	  set<PartSize>::iterator sCand_it;
+
+	  double Level_Relationship_level_cost_throld = 2171;	//层次相关性RDCost阈值
+
     for (Int iQP=iMinQP; iQP<=iMaxQP; iQP++)
     {
       const Bool bIsLosslessMode = isAddLowestQP && (iQP == iMinQP);
@@ -451,6 +479,43 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
       rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );		//当前CU初始化估计数据 对当前CU以4x4大小进行初始化
 
+
+
+
+
+
+
+	//统计当前CU与上一层次CU之间的PU选择的相关性
+	if (rpcBestCU->getSlice()->getPOC() >sample_frame_num && rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
+	{
+		TComDataCU * biggerCU;
+
+		if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
+			biggerCU = m_ppcBestCU[uiDepth - 1];
+		else
+			biggerCU = m_ppcTempCU[uiDepth - 1];
+
+		if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
+
+			int index;
+			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+				/ ((1 << ((4 - uiDepth) * 2)));
+
+			int divider = (256 / (pow(2, ((uiDepth - 1) * 2))));
+			Double cost_normalized = biggerCU->getTotalCost()/ divider;
+			
+			PartSize predict_partSize =(PartSize) splitMap[biggerCU->getPartitionSize(0)][index];
+
+			sCand.insert(predict_partSize);		//添加候选集
+
+			if (Level_Relationship_level_cost_throld >= cost_normalized) {  //判断是否满足阈值条件
+				isPredict_Level_Relationship = true;
+			}
+		}
+	}
+
+
+
       // do inter modes, SKIP and 2Nx2N
       if( rpcBestCU->getSlice()->getSliceType() != I_SLICE )
       {
@@ -467,13 +532,17 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
         if(!m_pcEncCfg->getUseEarlySkipDetection())
         {
-          // 2Nx2N, NxN
-          xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug) );
-          rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-          if(m_pcEncCfg->getUseCbfFastMode())
-          {
-            doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
-          }
+			// 2Nx2N,添加判断
+			set<PartSize>::iterator sCand_it = sCand.find(SIZE_2Nx2N);
+			if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end()))) {
+				// 2Nx2N
+				xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug));
+				rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+				if (m_pcEncCfg->getUseCbfFastMode())
+				{
+					doNotBlockPu = rpcBestCU->getQtRootCbf(0) != 0;
+				}
+			}
         }
       }
 
@@ -499,17 +568,24 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
         // do inter modes, NxN, 2NxN, and Nx2N
         if( rpcBestCU->getSlice()->getSliceType() != I_SLICE )
         {
-          // 2Nx2N, NxN
-          if(!( (rpcBestCU->getWidth(0)==8) && (rpcBestCU->getHeight(0)==8) ))
-          {
-            if( uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth && doNotBlockPu)
-            {
-              xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_NxN DEBUG_STRING_PASS_INTO(sDebug)   );
-              rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
-            }
-          }
+			// NxN,添加判断
+			sCand_it = sCand.find(SIZE_NxN);
+			if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end()))) {
 
-          if(doNotBlockPu)
+				//  NxN
+				if (!((rpcBestCU->getWidth(0) == 8) && (rpcBestCU->getHeight(0) == 8)))
+				{
+					if (uiDepth == g_uiMaxCUDepth - g_uiAddCUDepth && doNotBlockPu)
+					{
+						xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_NxN DEBUG_STRING_PASS_INTO(sDebug));
+						rpcTempCU->initEstData(uiDepth, iQP, bIsLosslessMode);
+					}
+				}
+			}
+
+			// Nx2N,添加判断
+		  sCand_it = sCand.find(SIZE_Nx2N);
+          if(!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
           {
             xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_Nx2N DEBUG_STRING_PASS_INTO(sDebug)  );
             rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -518,7 +594,9 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
               doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
             }
           }
-          if(doNotBlockPu)
+
+		  sCand_it = sCand.find(SIZE_2NxN);
+          if(!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
           {
             xCheckRDCostInter      ( rpcBestCU, rpcTempCU, SIZE_2NxN DEBUG_STRING_PASS_INTO(sDebug)  );
             rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -545,7 +623,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
             //! Do horizontal AMP
             if ( bTestAMP_Hor )
             {
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_2NxnU);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnU DEBUG_STRING_PASS_INTO(sDebug) );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -554,7 +633,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
                   doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
                 }
               }
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_2NxnD);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnD DEBUG_STRING_PASS_INTO(sDebug) );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -567,7 +647,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 #if AMP_MRG
             else if ( bTestMergeAMP_Hor )
             {
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_2NxnU);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnU DEBUG_STRING_PASS_INTO(sDebug), true );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -576,7 +657,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
                   doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
                 }
               }
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_2NxnD);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_2NxnD DEBUG_STRING_PASS_INTO(sDebug), true );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -591,7 +673,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
             //! Do horizontal AMP
             if ( bTestAMP_Ver )
             {
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_nLx2N);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nLx2N DEBUG_STRING_PASS_INTO(sDebug) );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -600,7 +683,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
                   doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
                 }
               }
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_nRx2N);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nRx2N DEBUG_STRING_PASS_INTO(sDebug) );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -609,7 +693,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 #if AMP_MRG
             else if ( bTestMergeAMP_Ver )
             {
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_nLx2N);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nLx2N DEBUG_STRING_PASS_INTO(sDebug), true );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -618,7 +703,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
                   doNotBlockPu = rpcBestCU->getQtRootCbf( 0 ) != 0;
                 }
               }
-              if(doNotBlockPu)
+			  sCand_it = sCand.find(SIZE_nRx2N);
+			  if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end())) && doNotBlockPu)
               {
                 xCheckRDCostInter( rpcBestCU, rpcTempCU, SIZE_nRx2N DEBUG_STRING_PASS_INTO(sDebug), true );
                 rpcTempCU->initEstData( uiDepth, iQP, bIsLosslessMode );
@@ -692,7 +778,17 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
 
+	//采样
+	if (rpcBestCU->getSlice()->getPOC() <= sample_frame_num) {
+		if (rpcBestCU->getSlice()->getSliceType() != I_SLICE) {
+			Double cost_normal = rpcBestCU->getTotalCost() / (256 / (pow(2, ((uiDepth)* 2))));
 
+			if (cost_normal < minValue)
+				minValue = cost_normal;
+			else if (cost_normal > maxValue)
+				maxValue = cost_normal;
+		}
+	}
 
 
     // Early CU determination
