@@ -502,9 +502,10 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			
 			PartSize predict_partSize =(PartSize) splitMap[biggerCU->getPartitionSize(0)][index];
 
+			sCand.insert(predict_partSize);		//添加候选集
+
 			Level_Relationship_level_cost_throld = (maxValue - minValue) *0.2 + minValue;
 			if (Level_Relationship_level_cost_throld >= cost_normalized) {  //判断是否满足阈值条件
-				sCand.insert(predict_partSize);		//添加候选集
 				isPredict_Level_Relationship = true;
 			}
 			else {
