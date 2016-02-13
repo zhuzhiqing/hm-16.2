@@ -566,7 +566,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 									}
 									else																	//大一个级别
 									{
-										int index = -1; //小块在大块中的坐标
+										index = -1; //小块在大块中的坐标
 										index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
 											/ ((1 << ((4 - uiDepth) * 2)));
 
