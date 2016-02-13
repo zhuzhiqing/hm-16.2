@@ -533,7 +533,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
         if(!m_pcEncCfg->getUseEarlySkipDetection())
         {
 			// 2Nx2N,添加判断
-			set<PartSize>::iterator sCand_it = sCand.find(SIZE_2Nx2N);
+			sCand_it = sCand.find(SIZE_2Nx2N);
 			if (!((isPredict && isPredict_Level_Relationship) && (sCand_it == sCand.end()))) {
 				// 2Nx2N
 				xCheckRDCostInter(rpcBestCU, rpcTempCU, SIZE_2Nx2N DEBUG_STRING_PASS_INTO(sDebug));
