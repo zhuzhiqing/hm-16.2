@@ -509,7 +509,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				isPredict_Level_Relationship = true;
 			}
 			else {
-
+				/*
 				TComDataCU * pCLCU = NULL;
 				//当前CU左上角在CTU中的位置
 				int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
@@ -581,7 +581,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 							//absMVY += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsVer();
 						}
 					}
-				}
+				} */
 			}
 
 		}
