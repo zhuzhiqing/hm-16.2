@@ -718,6 +718,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 	PartSize out_predict_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
 	Double Bigger_RDCost = MAX_DOUBLE;						//上一层次RDCost
 
+	bool isLeave = false;
 															//统计当前CU与上一层次CU之间的PU选择的相关性
 	if (rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
 	{
@@ -742,6 +743,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			out_level_Contains = (out_predict_PartSize == out_Rst_PartSize);					//是否包含
 			Bigger_RDCost = biggerCU->getTotalCost();	//RDCost
 		}
+		else
+			isLeave = true;
 	}
 
 	if (rpcBestCU->getSlice()->getSliceType() != I_SLICE)
@@ -778,7 +781,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			{
 				pCLCU = rpcBestCU->getSlice()->getRefPic(eRefPicList, iRefIdxTemp)->getCtu(rpcBestCU->getCtuRsAddr());
 
-				if (pCLCU != NULL)
+				if ((pCLCU != NULL ) &&(!isLeave))
 				{
 					out_Depth = (int)uiDepth;								//深度
 					out_Rst_PartSize = rpcBestCU->getPartitionSize(0);		//实际值
