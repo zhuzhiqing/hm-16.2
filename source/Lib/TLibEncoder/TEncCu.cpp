@@ -723,6 +723,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		bool isContais = false;	//是否包含
 		bool isContanisWith2Nx2N = false;
 		bool isRecord = false;
+		int type = -1;
 
 	//	double absMVX = 0, absMVY = 0;			//对应块运动矢量
 
@@ -752,6 +753,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 						if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 						{
 							isRecord = true;
+							type = 1;
 
 							for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
 							{
@@ -786,6 +788,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 						if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 						{
 							isRecord = true;
+							type = 2;
 
 							if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0))
 							{
@@ -814,7 +817,9 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 					{
 						if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 						{
-							//isRecord = true;
+							isRecord = true;
+							type = 3;
+
 							if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上
 							{
 								if (rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N) {
@@ -870,7 +875,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 			pCLCU = rpcBestCU->getSlice()->getRefPic(REF_PIC_LIST_0, 0)->getCtu(rpcBestCU->getCtuRsAddr());
 
-			rcumiddle << (int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'			//当前深度   当前分块模式
+			rcumiddle << type<<'\t'<<(int)rpcBestCU->getDepth(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'			//当前深度   当前分块模式
 																												//		<< isContais << '\t'<< isContanisWith2Nx2N << '\t' << numCandate << '\t'<<absMVX<<'\t'<<absMVY<<'\t';														//是否包含	包含2N*2N模式时是否包含 候选模式数量
 				<< isContais << '\t' << isContanisWith2Nx2N << '\t' << numCandate << '\t' << Cost_2Nx2N<<'\t'
 				<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getVer() << '\t'
