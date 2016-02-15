@@ -711,6 +711,39 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		{ 0,2,0,2 }
 	};
 
+	bool isRecord_level = false;
+	int out_Depth = -1;				//深度信息
+	bool out_level_Contains = false; //层次相关性预测是否准确
+	PartSize out_Rst_PartSize = NUMBER_OF_PART_SIZES;	//		最终分割模式
+	PartSize out_predict_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
+	Double Bigger_RDCost = MAX_DOUBLE;						//上一层次RDCost
+
+															//统计当前CU与上一层次CU之间的PU选择的相关性
+	if (rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
+	{
+		TComDataCU * biggerCU;
+
+		if (m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
+			biggerCU = m_ppcBestCU[uiDepth - 1];
+		else
+			biggerCU = m_ppcTempCU[uiDepth - 1];
+
+		if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
+
+			isRecord_level = true;
+
+			int index;
+			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+				/ ((1 << ((4 - uiDepth) * 2)));
+
+			out_Depth = (int)uiDepth;								//深度
+			out_Rst_PartSize = rpcBestCU->getPartitionSize(0);		//实际值
+			out_predict_PartSize = (PartSize)splitMap[biggerCU->getPartitionSize(0)][index];	//预测值
+			out_level_Contains = (out_predict_PartSize == out_Rst_PartSize);					//是否包含
+			Bigger_RDCost = biggerCU->getTotalCost();	//RDCost
+		}
+	}
+
 	if (rpcBestCU->getSlice()->getSliceType() != I_SLICE)
 	{
 
@@ -747,6 +780,9 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 				if (pCLCU != NULL)
 				{
+					out_Depth = (int)uiDepth;								//深度
+					out_Rst_PartSize = rpcBestCU->getPartitionSize(0);		//实际值
+
 					if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
 					{
 						//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
@@ -870,39 +906,6 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		}
 
 
-		bool isRecord_level = false;
-		int out_Depth = -1;				//深度信息
-		bool out_level_Contains = false; //层次相关性预测是否准确
-		PartSize out_Rst_PartSize = NUMBER_OF_PART_SIZES;	//		最终分割模式
-		PartSize out_predict_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
-		Double Bigger_RDCost = MAX_DOUBLE;						//上一层次RDCost
-
-		//统计当前CU与上一层次CU之间的PU选择的相关性
-		if (rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
-		{
-			TComDataCU * biggerCU;
-
-			if (m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
-				biggerCU = m_ppcBestCU[uiDepth - 1];
-			else
-				biggerCU = m_ppcTempCU[uiDepth - 1];
-
-			if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
-
-				isRecord_level = true;
-
-				int index;
-				index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-					/ ((1 << ((4 - uiDepth) * 2)));
-
-				out_Depth = (int)uiDepth;								//深度
-				out_Rst_PartSize = rpcBestCU->getPartitionSize(0);		//实际值
-				out_predict_PartSize = (PartSize)splitMap[biggerCU->getPartitionSize(0)][index];	//预测值
-				out_level_Contains = (out_predict_PartSize == out_Rst_PartSize);					//是否包含
-				Bigger_RDCost = biggerCU->getTotalCost();	//RDCost
-			}
-		}
-
 		//结果输出
 		if (isRecord_ref || isRecord_level) {
 			ofstream relationship;
@@ -919,7 +922,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				relationship << '-' << '\t' << '-' << '\t' << '-' << '\t';
 			}
 
-			if (isRecord_ref)
+			if (isRecord_ref && (out_Rst_PartSize != NUMBER_OF_PART_SIZES))
 			{
 				relationship << type << '\t' << isContais << '\t' << isContanisWith2Nx2N << '\t' << numCandate << '\t' << Cost_2Nx2N << '\t'
 				<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getVer() << '\t';
