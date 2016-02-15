@@ -724,7 +724,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		bool isContanisWith2Nx2N = false;
 		bool isRecord = false;
 
-		double absMVX = 0, absMVY = 0;			//对应块运动矢量
+	//	double absMVX = 0, absMVY = 0;			//对应块运动矢量
 
 		Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
 		int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
