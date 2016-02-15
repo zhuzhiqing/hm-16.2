@@ -908,7 +908,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 			ofstream relationship;
 			relationship.open("relationship", ios::app);
 
-			relationship << out_Depth << '\t' << out_Rst_PartSize << '\t';
+			relationship << out_Depth << '\t' << out_Rst_PartSize << '\t' << isRecord_level << '\t' << isRecord_ref << '\t';
 
 			if (isRecord_level)
 			{
