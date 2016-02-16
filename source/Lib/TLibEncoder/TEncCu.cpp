@@ -760,6 +760,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		bool isContanisWith2Nx2N = false;
 		bool isRecord_ref = false;
 		int type = -1;
+		PartSize out_predict_REF_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
 
 	//	double absMVX = 0, absMVY = 0;			//对应块运动矢量
 
@@ -791,34 +792,34 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 						//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
 						if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 						{
-							isRecord_ref = true;
-							type = 1;
+							//isRecord_ref = true;
+							//type = 1;
 
-							for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
-							{
-								it = subPartSizeTyeps.find(pCLCU->getPartitionSize(pos));
+							//for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
+							//{
+							//	it = subPartSizeTyeps.find(pCLCU->getPartitionSize(pos));
 
-								if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0))
-									isContais = true;
+							//	if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0))
+							//		isContais = true;
 
-								if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N)
-									isContanisWith2Nx2N = true;
+							//	if (pCLCU->getPartitionSize(pos) == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N)
+							//		isContanisWith2Nx2N = true;
 
 
-								if (it == subPartSizeTyeps.end())
-								{
-									//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;
-									subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1 << (4 - pCLCU->getDepth(pos)) * 2;
-									numCandate++;
-								}
-								else
-								{
-									//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
-									subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second + (1 << (4 - pCLCU->getDepth(pos)) * 2);
-								}
-								pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
-								numSubCu++;
-							}
+							//	if (it == subPartSizeTyeps.end())
+							//	{
+							//		//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;
+							//		subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1 << (4 - pCLCU->getDepth(pos)) * 2;
+							//		numCandate++;
+							//	}
+							//	else
+							//	{
+							//		//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
+							//		subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second + (1 << (4 - pCLCU->getDepth(pos)) * 2);
+							//	}
+							//	pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
+							//	numSubCu++;
+							//}
 						}
 
 					}
@@ -836,6 +837,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 							if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N)
 								isContanisWith2Nx2N = true;
+
+							out_predict_REF_PartSize = pCLCU->getPartitionSize(zorderIdxInCtu);
 
 							it = subPartSizeTyeps.find(pCLCU->getPartitionSize(zorderIdxInCtu));
 
@@ -866,6 +869,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 									isContanisWith2Nx2N = true;
 								}
 
+								out_predict_REF_PartSize = SIZE_2Nx2N;
+
 								it = subPartSizeTyeps.find(SIZE_2Nx2N);
 								if (it == subPartSizeTyeps.end())
 								{
@@ -883,7 +888,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 								index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
 									/ ((1 << ((4 - uiDepth) * 2)));
 
-
+								out_predict_REF_PartSize = (PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index];
 
 								if (splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index] == rpcBestCU->getPartitionSize(0))
 									isContais = true;
@@ -891,7 +896,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 								if (splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index] == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N)
 									isContanisWith2Nx2N = true;
 
-								it = subPartSizeTyeps.find(SIZE_2Nx2N);
+								it = subPartSizeTyeps.find(out_predict_REF_PartSize);
 								if (it == subPartSizeTyeps.end())
 								{
 									subPartSizeTyeps[(PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]] = 1 << (4 - uiDepth) * 2;
@@ -927,7 +932,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 			if (isRecord_ref && (out_Rst_PartSize != NUMBER_OF_PART_SIZES))
 			{
-				relationship << type << '\t' << isContais << '\t' << isContanisWith2Nx2N << '\t' << numCandate << '\t' << Cost_2Nx2N << '\t'
+				relationship << type << '\t' << isContais << '\t' << isContanisWith2Nx2N << '\t' << out_predict_REF_PartSize << '\t' << Cost_2Nx2N << '\t'
 				<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getVer() << '\t';
 
 				for (int i = 0; i < NUMBER_OF_PART_SIZES; i++)
