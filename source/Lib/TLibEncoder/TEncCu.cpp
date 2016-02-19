@@ -691,39 +691,6 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
     rpcBestCU->getTotalBins() += ((TEncBinCABAC *)((TEncSbac*)m_pcEntropyCoder->m_pcEntropyCoderIf)->getEncBinIf())->getBinsCoded();
     rpcBestCU->getTotalCost()  = m_pcRdCost->calcRdCost( rpcBestCU->getTotalBits(), rpcBestCU->getTotalDistortion() );
 
-	//统计当前CU与上一层次CU之间的PU选择的相关性
-	if ( rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
-	{
-		TComDataCU * biggerCU;
-
-		if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
-			biggerCU = m_ppcBestCU[uiDepth - 1];
-		else
-			biggerCU = m_ppcTempCU[uiDepth - 1];
-
-		if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
-
-			ofstream level_relationship;
-			level_relationship.open("reference_level_relationship", ios::app);
-
-			int index;
-			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-				/ ((1 << ((4 - uiDepth) * 2)));
-
-			level_relationship << rpcBestCU->getSlice()->getPOC() << '\t' << (int)uiDepth << '\t' << index << '\t' << rpcBestCU->getPredictionMode(0) << '\t' << rpcBestCU->getPartitionSize(0) << '\t'
-				<< rpcBestCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(0) << '\t' //<< rpcBestCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getHor() << '\t' << rpcBestCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getVer() << '\t'
-				<< rpcBestCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(0) << '\t' //<< rpcBestCU->getCUMvField(REF_PIC_LIST_1)->getMv(0).getHor() << '\t' << rpcBestCU->getCUMvField(REF_PIC_LIST_1)->getMv(0).getVer() << '\t'
-
-				<< biggerCU->getPredictionMode(0) << '\t' << biggerCU->getPartitionSize(0) << '\t' << biggerCU->getTotalCost() << '\t'		//上一层次的PU模式,上一层次RDCOst
-				<< biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(0) << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getHor() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(0).getVer() << '\t'
-				<< biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(0) << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(0).getHor() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(0).getVer() << '\t'
-				;
-			level_relationship << endl;
-			level_relationship.close();
-		}
-	}
-
-
 
     // Early CU determination
     if( m_pcEncCfg->getUseEarlyCU() && rpcBestCU->isSkipped(0) )
@@ -1355,6 +1322,46 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
     return;
   }
 #endif
+
+  //统计当前CU与上一层次CU之间的PU选择的相关性
+  if (rpcBestCU->getSlice()->getSliceType() != I_SLICE && uhDepth > 0)
+  {
+	  TComDataCU * biggerCU;
+
+	  if (m_ppcBestCU[uhDepth - 1]->getTotalCost() < m_ppcTempCU[uhDepth - 1]->getTotalCost())
+		  biggerCU = m_ppcBestCU[uhDepth - 1];
+	  else
+		  biggerCU = m_ppcTempCU[uhDepth - 1];
+
+	  if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
+
+		  ofstream level_relationship;
+		  level_relationship.open("reference_level_relationship", ios::app);
+
+		  int iNumPart = rpcTempCU->getNumPartitions();
+		  for (int uiPartIdx = 0; uiPartIdx < iNumPart; uiPartIdx++)
+		  {
+			  UInt absPartIdx;
+			  Int width, height;
+
+			  rpcTempCU->getPartIndexAndSize(uiPartIdx, absPartIdx, width, height);
+
+			  level_relationship << (int)uhDepth << '\t' << rpcTempCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx) << '\t'
+				  << rpcTempCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx) << '\t'
+
+				  << biggerCU->getTotalCost() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx) << '\t'
+				  << biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getHor() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getVer() << '\t'
+
+				  << biggerCU->getTotalCost() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx) << '\t'
+				  << biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getHor() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getVer() << '\t'
+				  ;
+			  level_relationship << endl;
+		  }
+
+		  level_relationship.close();
+	  }
+  }
+
 		
 		//是对得到预测值后求出的残差进行TU 的划分及RD 代价的计算
   m_pcPredSearch->encodeResAndCalcRdInterCU( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcResiYuvBest[uhDepth], m_ppcRecoYuvTemp[uhDepth], false DEBUG_STRING_PASS_INTO(sTest) );
