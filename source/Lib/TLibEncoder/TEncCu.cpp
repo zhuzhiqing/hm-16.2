@@ -1349,10 +1349,11 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
 			  level_relationship << (int)uhDepth << '\t' << rpcTempCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx) << '\t'
 				  << rpcTempCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx) << '\t'
 
-				  << biggerCU->getTotalCost() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx) << '\t'
+				  << biggerCU->getTotalCost() << '\t' 
+				  << biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx) << '\t'
 				  << biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getHor() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getVer() << '\t'
 
-				  << biggerCU->getTotalCost() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx) << '\t'
+				  << biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx) << '\t'
 				  << biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getHor() << '\t' << biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getVer() << '\t'
 				  ;
 			  level_relationship << endl;
