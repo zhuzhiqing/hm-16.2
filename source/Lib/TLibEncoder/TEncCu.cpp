@@ -713,10 +713,10 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 	bool isRecord_level = false;
 	int out_Depth = -1;				//深度信息
-	bool out_level_Contains = false; //层次相关性预测是否准确
+//	bool out_level_Contains = false; //层次相关性预测是否准确
 	PartSize out_Rst_PartSize = NUMBER_OF_PART_SIZES;	//		最终分割模式
-	PartSize out_predict_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
-	Double Bigger_RDCost = MAX_DOUBLE;						//上一层次RDCost
+//	PartSize out_predict_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
+//	Double Bigger_RDCost = MAX_DOUBLE;						//上一层次RDCost
 
 	bool isLeave = false;
 															//统计当前CU与上一层次CU之间的PU选择的相关性
@@ -739,9 +739,9 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 			out_Depth = (int)uiDepth;								//深度
 			out_Rst_PartSize = rpcBestCU->getPartitionSize(0);		//实际值
-			out_predict_PartSize = (PartSize)splitMap[biggerCU->getPartitionSize(0)][index];	//预测值
-			out_level_Contains = (out_predict_PartSize == out_Rst_PartSize);					//是否包含
-			Bigger_RDCost = biggerCU->getTotalCost();	//RDCost
+//			out_predict_PartSize = (PartSize)splitMap[biggerCU->getPartitionSize(0)][index];	//预测值
+//			out_level_Contains = (out_predict_PartSize == out_Rst_PartSize);					//是否包含
+//			Bigger_RDCost = biggerCU->getTotalCost();	//RDCost
 		}
 		else
 			isLeave = true;
@@ -754,13 +754,13 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 		map<PartSize, int> subPartSizeTyeps;
 		map<PartSize, int> ::iterator it;
 
-		int numSubCu = 0;		//子CU数量
-		int numCandate = 0;		//候选子CU数量
-		bool isContais = false;	//是否包含
-		bool isContanisWith2Nx2N = false;
+//		int numSubCu = 0;		//子CU数量
+//		int numCandate = 0;		//候选子CU数量
+//		bool isContais = false;	//是否包含
+//		bool isContanisWith2Nx2N = false;
 		bool isRecord_ref = false;
 		int type = -1;
-		PartSize out_predict_REF_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
+//		PartSize out_predict_REF_PartSize = NUMBER_OF_PART_SIZES; // 预测分割模式
 
 	//	double absMVX = 0, absMVY = 0;			//对应块运动矢量
 
