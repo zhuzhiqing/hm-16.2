@@ -700,16 +700,16 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 	* 第二个坐标，小块在大块中的坐标
 	* 值：小块最终取值
 	*/
-	int splitMap[][4] = {
-		{ 0,0,0,0 },
-		{ 0,0,0,0 },
-		{ 0,0,0,0 },
-		{ 0,0,0,0 },
-		{ 1,1,0,0 },
-		{ 0,0,1,1 },
-		{ 2,0,2,0 },
-		{ 0,2,0,2 }
-	};
+	//int splitMap[][4] = {
+	//	{ 0,0,0,0 },
+	//	{ 0,0,0,0 },
+	//	{ 0,0,0,0 },
+	//	{ 0,0,0,0 },
+	//	{ 1,1,0,0 },
+	//	{ 0,0,1,1 },
+	//	{ 2,0,2,0 },
+	//	{ 0,2,0,2 }
+	//};
 
 	bool isRecord_level = false;
 	int out_Depth = -1;				//深度信息
@@ -733,9 +733,9 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 			isRecord_level = true;
 
-			int index;
-			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-				/ ((1 << ((4 - uiDepth) * 2)));
+			//int index;
+			//index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+			//	/ ((1 << ((4 - uiDepth) * 2)));
 
 			out_Depth = (int)uiDepth;								//深度
 			out_Rst_PartSize = rpcBestCU->getPartitionSize(0);		//实际值
@@ -765,7 +765,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 	//	double absMVX = 0, absMVY = 0;			//对应块运动矢量
 
 	//	Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
-		int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
+		//int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
 
 		//当前CU左上角在CTU
 		int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
