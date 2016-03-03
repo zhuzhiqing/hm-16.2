@@ -792,8 +792,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 						//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
 						if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 						{
-							//isRecord_ref = true;
-							//type = 1;
+							isRecord_ref = true;
+							type = 1;
 
 							//for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
 							//{
@@ -829,30 +829,6 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 						{
 							isRecord_ref = true;
 							type = 2;
-
-							if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0))
-							{
-								isContais = true;
-							}
-
-							if (pCLCU->getPartitionSize(zorderIdxInCtu) == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N)
-								isContanisWith2Nx2N = true;
-
-							out_predict_REF_PartSize = pCLCU->getPartitionSize(zorderIdxInCtu);
-
-							it = subPartSizeTyeps.find(pCLCU->getPartitionSize(zorderIdxInCtu));
-
-							if (it == subPartSizeTyeps.end())
-							{
-								//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = 1;
-								subPartSizeTyeps[pCLCU->getPartitionSize(zorderIdxInCtu)] = 1 << (4 - pCLCU->getDepth(zorderIdxInCtu)) * 2;
-								numCandate++;
-							}
-							else
-							{
-								//subPartSizeTyeps[pCLCU->getPartitionSize(pos)] = (*it).second++;
-								subPartSizeTyeps[pCLCU->getPartitionSize(zorderIdxInCtu)] = (*it).second + (1 << (4 - pCLCU->getDepth(zorderIdxInCtu)) * 2);
-							}
 						}
 					}
 					else
@@ -860,95 +836,27 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 						if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
 						{
 							isRecord_ref = true;
-							type = 3;
-
-							if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上
-							{
-								if (rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N) {
-									isContais = true;
-									isContanisWith2Nx2N = true;
-								}
-
-								out_predict_REF_PartSize = SIZE_2Nx2N;
-
-								it = subPartSizeTyeps.find(SIZE_2Nx2N);
-								if (it == subPartSizeTyeps.end())
-								{
-									subPartSizeTyeps[SIZE_2Nx2N] = 1 << (4 - uiDepth) * 2;
-								}
-								else
-								{
-									subPartSizeTyeps[SIZE_2Nx2N] = (*it).second + (1 << (4 - uiDepth) * 2);
-								}
-							}
-							else																	//大一个级别
-							{
-
-								int index = -1; //小块在大块中的坐标
-								index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-									/ ((1 << ((4 - uiDepth) * 2)));
-
-								out_predict_REF_PartSize = (PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index];
-
-								if (splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index] == rpcBestCU->getPartitionSize(0))
-									isContais = true;
-
-								if (splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index] == rpcBestCU->getPartitionSize(0) || rpcBestCU->getPartitionSize(0) == SIZE_2Nx2N)
-									isContanisWith2Nx2N = true;
-
-								it = subPartSizeTyeps.find(out_predict_REF_PartSize);
-								if (it == subPartSizeTyeps.end())
-								{
-									subPartSizeTyeps[(PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]] = 1 << (4 - uiDepth) * 2;
-								}
-								else
-								{
-									subPartSizeTyeps[(PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]] = (*it).second + (1 << (4 - uiDepth) * 2);
-								}
-							}
+							type = 2;
 						}
 					}
-
 				}
+
 			}
+			
 		}
 
 
 		//结果输出
-		if ((isRecord_ref && (out_Rst_PartSize != NUMBER_OF_PART_SIZES)) || isRecord_level) {
+		if ((isRecord_ref && (out_Rst_PartSize != NUMBER_OF_PART_SIZES)) ) {
 			ofstream relationship;
 			relationship.open("relationship", ios::app);
 
 			relationship << out_Depth << '\t' << out_Rst_PartSize << '\t' << isRecord_level << '\t' << isRecord_ref << '\t';
 
-			if (isRecord_level)
-			{
-				relationship << out_level_Contains << '\t' << out_predict_PartSize << '\t' << Bigger_RDCost << '\t';
-			}
-			else
-			{
-				relationship << '-' << '\t' << '-' << '\t' << '-' << '\t';
-			}
 
 			if (isRecord_ref && (out_Rst_PartSize != NUMBER_OF_PART_SIZES))
 			{
-				relationship << type << '\t' << isContais << '\t' << isContanisWith2Nx2N << '\t' << out_predict_REF_PartSize << '\t' << Cost_2Nx2N << '\t'
-				<< pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getHor() << '\t' << pCLCU->getCUMvField(REF_PIC_LIST_0)->getMv(zorderIdxInCtu).getVer() << '\t';
-
-				for (int i = 0; i < NUMBER_OF_PART_SIZES; i++)
-				{
-					it = subPartSizeTyeps.find((PartSize)i);
-					if (it == subPartSizeTyeps.end())
-						relationship << 0 << '\t';
-					else
-						relationship << (double)((*it).second) / (double)((totalPartitonNum)) << '\t';
-				}
-			}
-			else
-			{
-				relationship << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t';
-
-				relationship << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t' << '-' << '\t';
+				relationship << type;
 			}
 
 			relationship << endl;
