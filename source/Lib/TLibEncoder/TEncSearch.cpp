@@ -3219,7 +3219,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 	  //循环每个参考帧
       for ( Int iRefIdxTemp = 0; iRefIdxTemp < pcCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTemp++ )
       {
-		if (use_2Nx2N || use_level)
+		if (use_2Nx2N || use_level || use_neibour)
 		{
 			if (cand[iRefIdxTemp] != 1)
 				continue;
@@ -3416,7 +3416,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 
         for ( Int iRefIdxTemp = iRefStart; iRefIdxTemp <= iRefEnd; iRefIdxTemp++ )
         {
-			if (use_2Nx2N || use_level)
+			if (use_2Nx2N || use_level || use_neibour)
 			{
 				if (cand[iRefIdxTemp] != 1)
 					continue;
