@@ -1343,75 +1343,74 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
     return;
   }
 #endif
+  biggerCU = NULL;
 
-  Bool use_level = false, use_2Nx2N = false, use_neibour = false;		//是否可用
-  Int out_depth = (int)uhDepth;				//当前块CU深度
-  Int out_CU_L0 = -1, out_CU_L1 = -1;		//当前块选择的参考帧
-  Double out_Upper_RDCost = 0, out_Upper_L0, out_Upper_L0_MVX, out_Upper_L0_MVY, out_Upper_L1, out_Upper_L1_MVX, out_Upper_L1_MVY;
+  //Bool use_level = false, use_2Nx2N = false, use_neibour = false;		//是否可用
+  //Int out_depth = (int)uhDepth;				//当前块CU深度
+  //Int out_CU_L0 = -1, out_CU_L1 = -1;		//当前块选择的参考帧
+  //Double out_Upper_RDCost = 0, out_Upper_L0, out_Upper_L0_MVX, out_Upper_L0_MVY, out_Upper_L1, out_Upper_L1_MVX, out_Upper_L1_MVY;
 
 
-  int iNumPart = rpcTempCU->getNumPartitions();
-  for (int uiPartIdx = 0; uiPartIdx < iNumPart; uiPartIdx++)
-  {
-	  UInt absPartIdx;
-	  Int width, height;
+  //int iNumPart = rpcTempCU->getNumPartitions();
+  //for (int uiPartIdx = 0; uiPartIdx < iNumPart; uiPartIdx++)
+  //{
+	 // UInt absPartIdx;
+	 // Int width, height;
 
-	  rpcTempCU->getPartIndexAndSize(uiPartIdx, absPartIdx, width, height);
+	 // rpcTempCU->getPartIndexAndSize(uiPartIdx, absPartIdx, width, height);
 
-	  out_CU_L0 = rpcTempCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx);
-	  out_CU_L1 = rpcTempCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx);
+	 // out_CU_L0 = rpcTempCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx);
+	 // out_CU_L1 = rpcTempCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx);
 
-	  if (uhDepth > 0)		//层次相关性可用
-	  {
-		  use_level = true;
+	 // if (uhDepth > 0)		//层次相关性可用
+	 // {
+		//  use_level = true;
 
-		  TComDataCU * biggerCU;
+		//  if (m_ppcBestCU[uhDepth - 1]->getTotalCost() < m_ppcTempCU[uhDepth - 1]->getTotalCost())
+		//	  biggerCU = m_ppcBestCU[uhDepth - 1];
+		//  else
+		//	  biggerCU = m_ppcTempCU[uhDepth - 1];
 
-		  if (m_ppcBestCU[uhDepth - 1]->getTotalCost() < m_ppcTempCU[uhDepth - 1]->getTotalCost())
-			  biggerCU = m_ppcBestCU[uhDepth - 1];
-		  else
-			  biggerCU = m_ppcTempCU[uhDepth - 1];
+		//  out_Upper_RDCost = biggerCU->getTotalCost();
+		//  out_Upper_L0 = biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx);
+		//  out_Upper_L0_MVX = biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getHor();
+		//  out_Upper_L0_MVY = biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getVer();
+		//  out_Upper_L1 = biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx);
+		//  out_Upper_L1_MVX = biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getHor();
+		//  out_Upper_L1_MVY = biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getVer();
+	 // }
 
-		  out_Upper_RDCost = biggerCU->getTotalCost();
-		  out_Upper_L0 = biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx);
-		  out_Upper_L0_MVX = biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getHor();
-		  out_Upper_L0_MVY = biggerCU->getCUMvField(REF_PIC_LIST_0)->getMv(absPartIdx).getVer();
-		  out_Upper_L1 = biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx);
-		  out_Upper_L1_MVX = biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getHor();
-		  out_Upper_L1_MVY = biggerCU->getCUMvField(REF_PIC_LIST_1)->getMv(absPartIdx).getVer();
-	  }
+	 // if (ePartSize != SIZE_2Nx2N)				//2NX2N可用
+		//  use_2Nx2N = true;
 
-	  if (ePartSize != SIZE_2Nx2N)				//2NX2N可用
-		  use_2Nx2N = true;
+	 // ofstream level_relationship;
+	 // level_relationship.open("reference_level_relationship", ios::app);
 
-	  ofstream level_relationship;
-	  level_relationship.open("reference_level_relationship", ios::app);
+	 // level_relationship << out_depth << '\t' << out_CU_L0 << '\t' << out_CU_L1 << '\t';
+	 // level_relationship << use_level << '\t' << use_2Nx2N << '\t' << use_neibour << '\t';
 
-	  level_relationship << out_depth << '\t' << out_CU_L0 << '\t' << out_CU_L1 << '\t';
-	  level_relationship << use_level << '\t' << use_2Nx2N << '\t' << use_neibour << '\t';
+	 // if (use_level)
+	 // {
+		//  level_relationship << out_Upper_RDCost << '\t' << out_Upper_L0 << '\t' << out_Upper_L0_MVX << '\t' << out_Upper_L0_MVY << '\t';
+		//  level_relationship << out_Upper_L1 << '\t' << out_Upper_L1_MVX << '\t' << out_Upper_L1_MVY << '\t';
+	 // }
+	 // else
+	 // {
+		//  level_relationship << -1 << '\t' << -1 << '\t' << -1 << '\t' << -1 << '\t';
+		//  level_relationship << -1 << '\t' << -1 << '\t' << -1 << '\t';
+	 // }
 
-	  if (use_level)
-	  {
-		  level_relationship << out_Upper_RDCost << '\t' << out_Upper_L0 << '\t' << out_Upper_L0_MVX << '\t' << out_Upper_L0_MVY << '\t';
-		  level_relationship << out_Upper_L1 << '\t' << out_Upper_L1_MVX << '\t' << out_Upper_L1_MVY << '\t';
-	  }
-	  else
-	  {
-		  level_relationship << -1 << '\t' << -1 << '\t' << -1 << '\t' << -1 << '\t';
-		  level_relationship << -1 << '\t' << -1 << '\t' << -1 << '\t';
-	  }
-
-	  if (use_2Nx2N)
-	  {
-		  level_relationship << RDCost << '\t' << _2NX2NRefL0 << '\t' << _2NX2NRefL1 << '\t';
-	  }
-	  else
-	  {
-		  level_relationship << -1 << '\t' << -1 << '\t' << -1 << '\t';
-	  }
-	  level_relationship << endl;
-	  level_relationship.close();
-  }
+	 // if (use_2Nx2N)
+	 // {
+		//  level_relationship << RDCost << '\t' << _2NX2NRefL0 << '\t' << _2NX2NRefL1 << '\t';
+	 // }
+	 // else
+	 // {
+		//  level_relationship << -1 << '\t' << -1 << '\t' << -1 << '\t';
+	 // }
+	 // level_relationship << endl;
+	 // level_relationship.close();
+  //}
 
 
   ////统计当前CU与上一层次CU之间的PU选择的相关性
