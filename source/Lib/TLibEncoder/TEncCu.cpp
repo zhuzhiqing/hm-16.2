@@ -1319,12 +1319,22 @@ Void TEncCu::xCheckRDCostInter( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, 
   rpcTempCU->setPredModeSubParts  ( MODE_INTER, 0, uhDepth );		//？为CU中的每一个4*4单元设置预测模式为MODE_INTER
   rpcTempCU->setChromaQpAdjSubParts( rpcTempCU->getCUTransquantBypass(0) ? 0 : m_ChromaQpAdjIdc, 0, uhDepth );
 
+
+  TComDataCU * biggerCU = NULL;
+  if (uhDepth > 0)		//层次相关性可用
+  {
+	  if (m_ppcBestCU[uhDepth - 1]->getTotalCost() < m_ppcTempCU[uhDepth - 1]->getTotalCost())
+		  biggerCU = m_ppcBestCU[uhDepth - 1];
+	  else
+		  biggerCU = m_ppcTempCU[uhDepth - 1];
+  }
+
 #if AMP_MRG
   rpcTempCU->setMergeAMP (true);									//设置使用merge的AMP（m_bIsMergeAMP=true）
-  m_pcPredSearch->predInterSearch ( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] DEBUG_STRING_PASS_INTO(sTest), false, bUseMRG );
+  m_pcPredSearch->predInterSearch (biggerCU,_2NX2NRefL0,  _2NX2NRefL1, rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] DEBUG_STRING_PASS_INTO(sTest), false, bUseMRG );
 																	//在该函数中得到当前分割模式下的最优预测方式。
 #else	
-  m_pcPredSearch->predInterSearch ( rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] );
+  m_pcPredSearch->predInterSearch (TComDataCU * biggerCU,Int _2NX2NRefL0, Int _2NX2NRefL1, rpcTempCU, m_ppcOrigYuv[uhDepth], m_ppcPredYuvTemp[uhDepth], m_ppcResiYuvTemp[uhDepth], m_ppcRecoYuvTemp[uhDepth] );
 #endif
 
 #if AMP_MRG

@@ -3075,7 +3075,7 @@ Void TEncSearch::xRestrictBipredMergeCand( TComDataCU* pcCU, UInt puIdx, TComMvF
  * 搜索帧间预测的最佳划分模式
  */
 #if AMP_MRG
-Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, TComYuv* pcResiYuv, TComYuv* pcRecoYuv DEBUG_STRING_FN_DECLARE(sDebug), Bool bUseRes, Bool bUseMRG )
+Void TEncSearch::predInterSearch(TComDataCU * biggerCU, Int _2NX2NRefL0, Int _2NX2NRefL1, TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, TComYuv* pcResiYuv, TComYuv* pcRecoYuv DEBUG_STRING_FN_DECLARE(sDebug), Bool bUseRes, Bool bUseMRG )
 #else
 Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* pcPredYuv, TComYuv* pcResiYuv, TComYuv* pcRecoYuv, Bool bUseRes )
 #endif
@@ -3165,6 +3165,40 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 
     pcCU->getPartIndexAndSize( iPartIdx, uiPartAddr, iRoiWidth, iRoiHeight );
 
+	//建立候选子集
+	int cand[16];
+	Bool use_level = false, use_2Nx2N = false, use_neibour = false;		//是否可用
+
+	if (biggerCU != NULL) {
+
+		int upper_l0 = biggerCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(uiPartAddr);
+		if (upper_l0 > -1)
+		{
+			use_level = true;
+			cand[upper_l0] = 1;
+		}
+		int upper_l1 = biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(uiPartAddr);
+		if (upper_l1 > -1)
+		{
+			use_level = true;
+			cand[upper_l1] = 1;
+		}
+	}
+	if (ePartSize != SIZE_2Nx2N)				//2NX2N可用
+	{
+		use_2Nx2N = true;
+		if (_2NX2NRefL0 > -1)
+		{
+			cand[_2NX2NRefL0] = 1;
+		}
+
+		if (_2NX2NRefL1 > -1)
+		{
+			cand[_2NX2NRefL1] = 1;
+		}
+
+	}
+
 #if AMP_MRG
     Bool bTestNormalMC = true;
 
@@ -3185,6 +3219,12 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 	  //循环每个参考帧
       for ( Int iRefIdxTemp = 0; iRefIdxTemp < pcCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTemp++ )
       {
+		if (use_2Nx2N || use_level)
+		{
+			if (cand[iRefIdxTemp] != 1)
+				continue;
+		}
+
         uiBitsTemp = uiMbBits[iRefList];
         if ( pcCU->getSlice()->getNumRefIdx(eRefPicList) > 1 )					//双向预测时候大于1
         {
@@ -3223,13 +3263,25 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
           }
           else
           {
+//			  if (use_2Nx2N || use_level)
+//			  {
+//				  if (cand[iRefIdxTemp] != 1)
+//					  uiCostTemp = std::numeric_limits<Distortion>::max();
+//			  }
+//			  else
 			  //进行运动估计，通过运动搜索求得最优的运动矢量
             xMotionEstimation ( pcCU, pcOrgYuv, iPartIdx, eRefPicList, &cMvPred[iRefList][iRefIdxTemp], iRefIdxTemp, cMvTemp[iRefList][iRefIdxTemp], uiBitsTemp, uiCostTemp );
           }
         }
         else
         {
-          xMotionEstimation ( pcCU, pcOrgYuv, iPartIdx, eRefPicList, &cMvPred[iRefList][iRefIdxTemp], iRefIdxTemp, cMvTemp[iRefList][iRefIdxTemp], uiBitsTemp, uiCostTemp );
+//			if (use_2Nx2N || use_level)
+//			{
+//				if (cand[iRefIdxTemp] != 1)
+//					uiCostTemp = std::numeric_limits<Distortion>::max();
+//			}
+//			else
+				xMotionEstimation ( pcCU, pcOrgYuv, iPartIdx, eRefPicList, &cMvPred[iRefList][iRefIdxTemp], iRefIdxTemp, cMvTemp[iRefList][iRefIdxTemp], uiBitsTemp, uiCostTemp );
         }
 #else
         xMotionEstimation ( pcCU, pcOrgYuv, iPartIdx, eRefPicList, &cMvPred[iRefList][iRefIdxTemp], iRefIdxTemp, cMvTemp[iRefList][iRefIdxTemp], uiBitsTemp, uiCostTemp );
@@ -3364,6 +3416,12 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 
         for ( Int iRefIdxTemp = iRefStart; iRefIdxTemp <= iRefEnd; iRefIdxTemp++ )
         {
+			if (use_2Nx2N || use_level)
+			{
+				if (cand[iRefIdxTemp] != 1)
+					continue;
+			}
+
           uiBitsTemp = uiMbBits[2] + uiMotBits[1-iRefList];
           if ( pcCU->getSlice()->getNumRefIdx(eRefPicList) > 1 )
           {

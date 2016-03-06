@@ -191,7 +191,10 @@ public:
                                   DEBUG_STRING_FN_DECLARE(sDebug));
 
   /// encoder estimation - inter prediction (non-skip)
-  Void predInterSearch          ( TComDataCU* pcCU,
+  Void predInterSearch          ( TComDataCU * biggerCU, 
+								  Int _2NX2NRefL0,
+								  Int _2NX2NRefL1, 
+								  TComDataCU* pcCU,
                                   TComYuv*    pcOrgYuv,
                                   TComYuv*    pcPredYuv,
                                   TComYuv*    pcResiYuv,
