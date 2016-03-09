@@ -482,8 +482,18 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 		  rpcBestCU->getPartIndexAndSize(0, absPartIdx, width, height);
 
-		  _2NX2NRefL0 = rpcBestCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx);
-		  _2NX2NRefL1 = rpcBestCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx);
+		  Int RefPos0 = rpcBestCU->getCUMvField(REF_PIC_LIST_0)->getRefIdx(absPartIdx);
+		  Int RefPos1 = rpcBestCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(absPartIdx);
+
+		  if (RefPos0 > -1)
+		  {
+			  _2NX2NRefL0 =  rpcBestCU->getSlice()->getRefPOC(REF_PIC_LIST_0, RefPos0);
+		  }
+
+		  if (RefPos1 > -1)
+		  {
+			  _2NX2NRefL1 = rpcBestCU->getSlice()->getRefPOC(REF_PIC_LIST_1, RefPos1);
+		  }
 		  _2NX2NRDCost = rpcBestCU->getTotalCost();
         }
       }

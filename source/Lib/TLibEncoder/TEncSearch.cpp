@@ -3167,6 +3167,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 
 	//建立候选子集
 	int cand[16];
+	int cand_num = 0;
 	Bool use_level = false, use_2Nx2N = false, use_neibour = false;		//是否可用
 
 	if (biggerCU != NULL) {
@@ -3175,26 +3176,27 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 		if (upper_l0 > -1)
 		{
 			use_level = true;
-			cand[upper_l0] = 1;
+			cand[cand_num++] = biggerCU->getSlice()->getRefPOC(REF_PIC_LIST_0, upper_l0);
 		}
 		int upper_l1 = biggerCU->getCUMvField(REF_PIC_LIST_1)->getRefIdx(uiPartAddr);
 		if (upper_l1 > -1)
 		{
 			use_level = true;
-			cand[upper_l1] = 1;
+			cand[cand_num++] = biggerCU->getSlice()->getRefPOC(REF_PIC_LIST_1, upper_l1);
 		}
 	}
 	if (ePartSize != SIZE_2Nx2N)				//2NX2N可用
 	{
-		use_2Nx2N = true;
 		if (_2NX2NRefL0 > -1)
 		{
-			cand[_2NX2NRefL0] = 1;
+			use_2Nx2N = true;
+			cand[cand_num++] = _2NX2NRefL0;
 		}
 
 		if (_2NX2NRefL1 > -1)
 		{
-			cand[_2NX2NRefL1] = 1;
+			use_2Nx2N = true;
+			cand[cand_num++] = _2NX2NRefL1;
 		}
 
 	}
@@ -3216,12 +3218,46 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
     {
       RefPicList  eRefPicList = ( iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0 );
 																				//后向参考帧	前向
+	  bool isCandExisit = false;
+
+	  for (Int iRefIdxTest = 0; iRefIdxTest < pcCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTest++)
+	  {
+		  Int refPoc = pcCU->getSlice()->getRefPOC(eRefPicList, iRefIdxTest);
+
+		  for (int candIndex = 0; candIndex < cand_num; candIndex++)
+		  {
+			  if (cand[candIndex] == refPoc)
+			  {
+				  isCandExisit = true;
+				  break;
+			  }
+		  }
+
+		  if (isCandExisit = true)
+			  break;
+	  }
+
+
 	  //循环每个参考帧
       for ( Int iRefIdxTemp = 0; iRefIdxTemp < pcCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTemp++ )
       {
-		if (use_2Nx2N || use_level || use_neibour)
+
+
+		if ((isCandExisit&&(use_2Nx2N || use_level)) || use_neibour)
 		{
-			if (cand[iRefIdxTemp] != 1)
+			bool isSkip = true;
+			Int refPoc = pcCU->getSlice()->getRefPOC(eRefPicList, iRefIdxTemp);
+
+			for (int candIndex = 0; candIndex < cand_num; candIndex++)
+			{
+				if (cand[candIndex] == refPoc)
+				{
+					isSkip = false;;
+					break;
+				}
+			}
+
+			if (isSkip)
 				continue;
 		}
 
@@ -3414,11 +3450,42 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
         iRefStart = 0;
         iRefEnd   = pcCU->getSlice()->getNumRefIdx(eRefPicList)-1;
 
+		bool isCandExisit = false;
+
+		for (Int iRefIdxTest = 0; iRefIdxTest < pcCU->getSlice()->getNumRefIdx(eRefPicList); iRefIdxTest++)
+		{
+			Int refPoc = pcCU->getSlice()->getRefPOC(eRefPicList, iRefIdxTest);
+
+			for (int candIndex = 0; candIndex < cand_num; candIndex++)
+			{
+				if (cand[candIndex] == refPoc)
+				{
+					isCandExisit = true;
+					break;
+				}
+			}
+
+			if (isCandExisit = true)
+				break;
+		}
+
         for ( Int iRefIdxTemp = iRefStart; iRefIdxTemp <= iRefEnd; iRefIdxTemp++ )
         {
-			if (use_2Nx2N || use_level || use_neibour)
+			if ((isCandExisit && (use_2Nx2N || use_level)) || use_neibour)
 			{
-				if (cand[iRefIdxTemp] != 1)
+				bool isSkip = true;
+				Int refPoc = pcCU->getSlice()->getRefPOC(eRefPicList, iRefIdxTemp);
+
+				for (int candIndex = 0; candIndex < cand_num; candIndex++)
+				{
+					if (cand[candIndex] == refPoc)
+					{
+						isSkip = false;;
+						break;
+					}
+				}
+
+				if (isSkip)
 					continue;
 			}
 
