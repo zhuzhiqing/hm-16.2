@@ -3233,7 +3233,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 			  }
 		  }
 
-		  if (isCandExisit = true)
+		  if (isCandExisit == true)
 			  break;
 	  }
 
@@ -3465,7 +3465,7 @@ Void TEncSearch::predInterSearch( TComDataCU* pcCU, TComYuv* pcOrgYuv, TComYuv* 
 				}
 			}
 
-			if (isCandExisit = true)
+			if (isCandExisit == true)
 				break;
 		}
 
