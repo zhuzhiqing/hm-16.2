@@ -482,99 +482,150 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 
 
 	//统计当前CU与上一层次CU之间的PU选择的相关性
-	if (rpcBestCU->getSlice()->getPOC() >sample_frame_num && rpcBestCU->getSlice()->getSliceType() != I_SLICE && uiDepth > 0)
-	{
-		TComDataCU * biggerCU;
+	  if (rpcBestCU->getSlice()->getPOC() > sample_frame_num && rpcBestCU->getSlice()->getSliceType() != I_SLICE)
+	  {
+		  TComDataCU * pCLCU = NULL;
+		  if (uiDepth > 0)
+		  {
+			  TComDataCU * biggerCU;
 
-		if(m_ppcBestCU[uiDepth - 1]->getTotalCost()	<	m_ppcTempCU[uiDepth - 1]->getTotalCost())
-			biggerCU = m_ppcBestCU[uiDepth - 1];
-		else
-			biggerCU = m_ppcTempCU[uiDepth - 1];
+			  if (m_ppcBestCU[uiDepth - 1]->getTotalCost() < m_ppcTempCU[uiDepth - 1]->getTotalCost())
+				  biggerCU = m_ppcBestCU[uiDepth - 1];
+			  else
+				  biggerCU = m_ppcTempCU[uiDepth - 1];
 
-		if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
+			  if (biggerCU->getTotalCost() < 1.7e+308) {				//当遇到非整数边界时，CU大块分割不会进行，会直接进入小块分割
 
-			int index;
-			index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-				/ ((1 << ((4 - uiDepth) * 2)));
+				  int index;
+				  index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+					  / ((1 << ((4 - uiDepth) * 2)));
 
-			int divider = (256 / (pow(2, ((uiDepth - 1) * 2))));
-			Double cost_normalized = biggerCU->getTotalCost()/ divider;
-			
-			PartSize predict_partSize =(PartSize) splitMap[biggerCU->getPartitionSize(0)][index];
+				  int divider = (256 / (pow(2, ((uiDepth - 1) * 2))));
+				  Double cost_normalized = biggerCU->getTotalCost() / divider;
 
-			sCand.insert(predict_partSize);		//添加候选集
+				  PartSize predict_partSize = (PartSize)splitMap[biggerCU->getPartitionSize(0)][index];
 
-			Level_Relationship_level_cost_throld = (maxValue - minValue) *0.2 + minValue;
-			if (Level_Relationship_level_cost_throld >= cost_normalized) {  //判断是否满足阈值条件
-				isPredict_Level_Relationship = true;
-			}
-			else {
-				
-				TComDataCU * pCLCU = NULL;
-				//当前CU左上角在CTU中的位置
-				int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
+				  sCand.insert(predict_partSize);		//添加候选集
 
-				//	double absMVX = 0,absMVY = 0;
+				  Level_Relationship_level_cost_throld = (maxValue - minValue) *0.2 + minValue;
+				  if (Level_Relationship_level_cost_throld >= cost_normalized) {  //判断是否满足阈值条件
+					  isPredict_Level_Relationship = true;
+				  }
+				  else {
+
+					  //当前CU左上角在CTU中的位置
+					  int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
+
+					  //	double absMVX = 0,absMVY = 0;
 
 
-		//		Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
-		//		int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
+			  //		Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
+			  //		int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
 
-				//参考帧方向循环
-				//for (Int iRefList = 0; iRefList < 1; iRefList++)				//iNumPredDir为预测方向数量
-				//{
-				//	RefPicList  eRefPicList = (iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0);		//后向参考帧	前向
+					  //参考帧方向循环
+					  //for (Int iRefList = 0; iRefList < 1; iRefList++)				//iNumPredDir为预测方向数量
+					  //{
+					  //	RefPicList  eRefPicList = (iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0);		//后向参考帧	前向
 
-																								//循环每个参考帧
-					//for (Int iRefIdxTemp = 0; iRefIdxTemp < rpcBestCU->getSlice()->getNumRefIdx(eRefPicList)/2; iRefIdxTemp++)
-					//for (Int iRefIdxTemp = 0; iRefIdxTemp < 1; iRefIdxTemp++)
-					//{
-						pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
-						//pCLCU = rpcBestCU->getCUColocated(eRefPicList);
-						if (pCLCU != NULL) {
+																									  //循环每个参考帧
+						  //for (Int iRefIdxTemp = 0; iRefIdxTemp < rpcBestCU->getSlice()->getNumRefIdx(eRefPicList)/2; iRefIdxTemp++)
+						  //for (Int iRefIdxTemp = 0; iRefIdxTemp < 1; iRefIdxTemp++)
+						  //{
+					  pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
+					  //pCLCU = rpcBestCU->getCUColocated(eRefPicList);
+					  if (pCLCU != NULL) {
 
-							if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
-							{
+						  if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
+						  {
 
-							}
-							else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))			//CLCU与当前CU一样大
-							{
-								if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
-								{
-									isPredict_Temporal = true;
+						  }
+						  else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))			//CLCU与当前CU一样大
+						  {
+							  if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+							  {
+								  isPredict_Temporal = true;
 
-									sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));
+								  sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));
 
-								}
-							}
-							else
-							{
-								if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
-								{
-									isPredict_Temporal = true;
-									if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上,只要当前最佳模式为2Nx2N则符合
-									{
-										sCand.insert(SIZE_2Nx2N);
-									}
-									else																	//大一个级别
-									{
-										index = -1; //小块在大块中的坐标
-										index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
-											/ ((1 << ((4 - uiDepth) * 2)));
+							  }
+						  }
+						  else
+						  {
+							  if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+							  {
+								  isPredict_Temporal = true;
+								  if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上,只要当前最佳模式为2Nx2N则符合
+								  {
+									  sCand.insert(SIZE_2Nx2N);
+								  }
+								  else																	//大一个级别
+								  {
+									  index = -1; //小块在大块中的坐标
+									  index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+										  / ((1 << ((4 - uiDepth) * 2)));
 
-										sCand.insert((PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]);
-									}
-								}
-							}
+									  sCand.insert((PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]);
+								  }
+							  }
+						  }
 
-							//absMVX += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsHor();
-							//absMVY += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsVer();
-						}
-					//}
-				//} 
-			}
+						  //absMVX += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsHor();
+						  //absMVY += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsVer();
+					  }
+					  //}
+				  //} 
+				  }
 
-		}
+			  }
+		  }
+		  else {
+
+			  //当前CU左上角在CTU中的位置
+			  int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
+
+			  int index;
+			  index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+				  / ((1 << ((4 - uiDepth) * 2)));
+
+			  pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
+			  //pCLCU = rpcBestCU->getCUColocated(eRefPicList);
+			  if (pCLCU != NULL) {
+
+				  if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
+				  {
+
+				  }
+				  else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))			//CLCU与当前CU一样大
+				  {
+					  if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+					  {
+						  isPredict_Temporal = true;
+
+						  sCand.insert(pCLCU->getPartitionSize(zorderIdxInCtu));
+
+					  }
+				  }
+				  else
+				  {
+					  if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
+					  {
+						  isPredict_Temporal = true;
+						  if ((rpcBestCU->getDepth(0) - pCLCU->getDepth(zorderIdxInCtu)) > 1)		// 比当前CU高两个级别以上,只要当前最佳模式为2Nx2N则符合
+						  {
+							  sCand.insert(SIZE_2Nx2N);
+						  }
+						  else																	//大一个级别
+						  {
+							  index = -1; //小块在大块中的坐标
+							  index = (rpcBestCU->getZorderIdxInCtu() % (1 << ((5 - uiDepth) * 2)))
+								  / ((1 << ((4 - uiDepth) * 2)));
+
+							  sCand.insert((PartSize)splitMap[pCLCU->getPartitionSize(zorderIdxInCtu)][index]);
+						  }
+					  }
+				  }
+			  }
+		  }
 	}
 
 
