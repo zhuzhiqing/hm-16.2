@@ -517,8 +517,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				//	double absMVX = 0,absMVY = 0;
 
 
-				Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
-				int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
+		//		Int          iNumPredDir = rpcBestCU->getSlice()->isInterP() ? 1 : 2;	//iNumPredDir表示预测方向的个数，P帧为单向预测，B帧为双向预测。
+		//		int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
 
 				//参考帧方向循环
 				//for (Int iRefList = 0; iRefList < 1; iRefList++)				//iNumPredDir为预测方向数量
