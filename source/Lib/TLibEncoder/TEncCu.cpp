@@ -509,7 +509,7 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				isPredict_Level_Relationship = true;
 			}
 			else {
-				/*
+				
 				TComDataCU * pCLCU = NULL;
 				//当前CU左上角在CTU中的位置
 				int zorderIdxInCtu = rpcBestCU->getZorderIdxInCtu();
@@ -521,30 +521,20 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 				int totalPartitonNum = 1 << (4 - rpcBestCU->getDepth(0)) * 2;
 
 				//参考帧方向循环
-				for (Int iRefList = 0; iRefList < iNumPredDir; iRefList++)				//iNumPredDir为预测方向数量
-				{
-					RefPicList  eRefPicList = (iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0);		//后向参考帧	前向
+				//for (Int iRefList = 0; iRefList < 1; iRefList++)				//iNumPredDir为预测方向数量
+				//{
+				//	RefPicList  eRefPicList = (iRefList ? REF_PIC_LIST_1 : REF_PIC_LIST_0);		//后向参考帧	前向
 
 																								//循环每个参考帧
-					for (Int iRefIdxTemp = 0; iRefIdxTemp < rpcBestCU->getSlice()->getNumRefIdx(eRefPicList)/2; iRefIdxTemp++)
-					{
-						pCLCU = rpcBestCU->getSlice()->getRefPic(eRefPicList, iRefIdxTemp)->getCtu(rpcBestCU->getCtuRsAddr());
+					//for (Int iRefIdxTemp = 0; iRefIdxTemp < rpcBestCU->getSlice()->getNumRefIdx(eRefPicList)/2; iRefIdxTemp++)
+					//for (Int iRefIdxTemp = 0; iRefIdxTemp < 1; iRefIdxTemp++)
+					//{
+						pCLCU = rpcBestCU->getCUColocated(REF_PIC_LIST_0);
 						//pCLCU = rpcBestCU->getCUColocated(eRefPicList);
 						if (pCLCU != NULL) {
 
 							if (pCLCU->getDepth(zorderIdxInCtu) > rpcBestCU->getDepth(0))
 							{
-								//CLCU 比当前CU小,记录3个数据：a.是否大于4个划分   b.是否包含在子CU中  c.子CU的PU种类
-								if (pCLCU->getPredictionMode(zorderIdxInCtu) == MODE_INTER)				//是帧间预测
-								{
-									isPredict_Temporal = true;
-
-									for (int pos = zorderIdxInCtu; pos < zorderIdxInCtu + totalPartitonNum;)
-									{
-										sCand.insert(pCLCU->getPartitionSize(pos));
-										pos += 1 << (4 - pCLCU->getDepth(pos)) * 2;
-									}
-								}
 
 							}
 							else if (pCLCU->getDepth(zorderIdxInCtu) == rpcBestCU->getDepth(0))			//CLCU与当前CU一样大
@@ -580,8 +570,8 @@ Void TEncCu::xCompressCU( TComDataCU*& rpcBestCU, TComDataCU*& rpcTempCU, UInt u
 							//absMVX += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsHor();
 							//absMVY += pCLCU->getCUMvField(eRefPicList)->getMv(0).getAbsVer();
 						}
-					}
-				} */
+					//}
+				//} 
 			}
 
 		}
